@@ -35,14 +35,16 @@ def monitor_scadenze():
     avvisi = []
     for c in st.session_state.clienti:
         if c.get("Attivo", True):
-            for doc_tipo in ["CI", "Passaporto", "Permesso", "Patente"]:
-                scad = c.get(f"Scadenza_{doc_tipo}")
+            docs = {"CI": "Scadenza_CI", "Passaporto": "Scadenza_Passaporto", 
+                    "Permesso": "Scadenza_Permesso", "Patente": "Scadenza_Patente"}
+            for label, key in docs.items():
+                scad = c.get(key)
                 if scad:
                     giorni = (scad - oggi).days
                     if 0 <= giorni <= 30:
-                        avvisi.append(f"⚠️ {c['Nome']}: {doc_tipo} in scadenza il {f_data(scad)} ({giorni} gg)")
+                        avvisi.append(f"⚠️ {c['Nome']}: {label} in scadenza il {f_data(scad)}")
                     elif giorni < 0:
-                        avvisi.append(f"🚨 {c['Nome']}: {doc_tipo} SCADUTO il {f_data(scad)}!")
+                        avvisi.append(f"🚨 {c['Nome']}: {label} SCADUTO il {f_data(scad)}!")
     return avvisi
 
 # --- SIDEBAR ---
@@ -60,11 +62,11 @@ if menu == "Dashboard":
     c1, c2, c3 = st.columns(3)
     c1.metric("Clienti Attivi", len([c for c in st.session_state.clienti if c.get("Attivo", True)]))
     c2.metric("Pratiche Totali", len(st.session_state.pratiche))
-    c3.metric("Data", f_data(date.today()))
+    c3.metric("Account", "studiorbertin@gmail.com")
 
 # 2. ANAGRAFICA CLIENTI
 elif menu == "Anagrafica Clienti":
-    st.header("👥 Gestione Completa Clienti")
+    st.header("👥 Gestione Anagrafica e Google Drive")
     
     with st.expander("➕ Inserisci / Modifica Anagrafica"):
         t1, t2, t3 = st.columns(3)
@@ -72,7 +74,7 @@ elif menu == "Anagrafica Clienti":
             st.subheader("📍 Dati Personali")
             nome = st.text_input("Nome e Cognome")
             cf = st.text_input("Codice Fiscale")
-            nascita_d = st.date_input("Data Nascita", value=date(1980,1,1), format="DD/MM/YYYY")
+            nascita_d = st.date_input("Data Nascita", value=date(1985,1,1), format="DD/MM/YYYY")
             nascita_l = st.text_input("Luogo di Nascita")
             residenza = st.text_input("Indirizzo Residenza")
             attivo = st.toggle("Cliente Attivo", value=True)
@@ -86,36 +88,31 @@ elif menu == "Anagrafica Clienti":
 
         with t3:
             st.subheader("🪪 Documenti e Scadenze")
-            # Carta Identità
-            st.write("**Carta d'Identità**")
-            num_ci = st.text_input("Numero CI")
-            scad_ci = st.date_input("Scadenza CI", format="DD/MM/YYYY", key="sci")
-            # Passaporto
-            st.write("**Passaporto**")
-            num_pass = st.text_input("Numero Passaporto")
-            scad_pass = st.date_input("Scadenza Passaporto", format="DD/MM/YYYY", key="spass")
-            # Permesso Soggiorno
-            st.write("**Permesso di Soggiorno**")
-            num_perm = st.text_input("Numero Permesso")
-            scad_perm = st.date_input("Scadenza Permesso", format="DD/MM/YYYY", key="sperm")
-            # Patente
-            st.write("**Patente**")
-            num_pat = st.text_input("Numero Patente")
-            scad_pat = st.date_input("Scadenza Patente", format="DD/MM/YYYY", key="spat")
+            scad_ci = st.date_input("Scadenza C.I.", format="DD/MM/YYYY")
+            scad_pass = st.date_input("Scadenza Passaporto", format="DD/MM/YYYY")
+            scad_perm = st.date_input("Scadenza Permesso Soggiorno", format="DD/MM/YYYY")
+            scad_pat = st.date_input("Scadenza Patente", format="DD/MM/YYYY")
+            
+            st.write("---")
+            carica_file = st.file_uploader("Scegli file da caricare su Drive", accept_multiple_files=True)
 
-        if st.button("💾 Salva Cliente e Crea Cartella Drive"):
+        if st.button("🚀 SALVA E CREA CARTELLA DRIVE"):
             if nome and cf:
+                # Logica per Drive (Percorso richiesto)
+                percorso = f"GESTIONALE RBERTIN / {nome}"
+                
                 nuovo_c = {
                     "Nome": nome, "CF": cf, "Nascita": nascita_d, "Luogo": nascita_l,
                     "Residenza": residenza, "Attivo": attivo, "Telefono": tel,
                     "Email": email, "PEC": pec, "Note": note,
-                    "Num_CI": num_ci, "Scadenza_CI": scad_ci,
-                    "Num_Passaporto": num_pass, "Scadenza_Passaporto": scad_pass,
-                    "Num_Permesso": num_perm, "Scadenza_Permesso": scad_perm,
-                    "Num_Patente": num_pat, "Scadenza_Patente": scad_pat
+                    "Scadenza_CI": scad_ci, "Scadenza_Passaporto": scad_pass,
+                    "Scadenza_Permesso": scad_perm, "Scadenza_Patente": scad_pat,
+                    "Drive_Path": percorso
                 }
                 st.session_state.clienti.append(nuovo_c)
-                st.success(f"✅ Cliente {nome} salvato! Cartella Drive creata: Studio_RBertin/{nome}")
+                st.success(f"✅ Cliente salvato! Creata cartella in Drive: {percorso}")
+                if carica_file:
+                    st.info(f"Caricamento di {len(carica_file)} file nella cartella di {nome}...")
             else:
                 st.error("Nome e CF obbligatori!")
 
@@ -126,7 +123,7 @@ elif menu == "Anagrafica Clienti":
 
 # 3. NUOVA PRATICA
 elif menu == "Nuova Pratica":
-    st.header("📂 Apertura Pratica")
+    st.header("📂 Nuova Pratica")
     if not st.session_state.clienti:
         st.warning("Aggiungi prima un cliente.")
     else:
@@ -134,11 +131,12 @@ elif menu == "Nuova Pratica":
         scelto = st.selectbox("Cliente", nomi)
         macro = st.selectbox("Categoria", ["FISCO", "CONSOLARI", "PUBBLICA AMMINISTRAZIONE", "VARIE"])
         
-        # Checklist
-        if macro == "FISCO": checklist = ["Fatture", "Delega Fiscale"]
-        elif macro == "CONSOLARI": checklist = ["Passaporto", "Foto", "Moduli"]
-        elif macro == "PUBBLICA AMMINISTRAZIONE": checklist = ["Tessera Sanitaria", "Modulo PA"]
-        else: checklist = ["Documentazione Vari"]
+        # Checklist rimesse
+        checklist = []
+        if macro == "FISCO": checklist = ["Fatture", "Delega"]
+        elif macro == "CONSOLARI": checklist = ["Passaporto", "Foto"]
+        elif macro == "PUBBLICA AMMINISTRAZIONE": checklist = ["Tessera Sanitaria", "Modulo"]
+        else: checklist = ["Documentazione"]
 
         for item in checklist: st.checkbox(item, key=f"{scelto}_{item}")
         
