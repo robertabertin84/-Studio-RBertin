@@ -2,125 +2,152 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, date
 
-# 1. Configurazione Pagina
+# 1. Configurazione della Pagina
 st.set_page_config(page_title="Studio RBertin - Gestionale", layout="wide")
 
-# --- LOGIN ---
+# --- SISTEMA DI ACCESSO (Password) ---
 if 'autenticato' not in st.session_state:
     st.session_state.autenticato = False
 
 if not st.session_state.autenticato:
     st.title("🔐 Accesso Studio RBertin")
-    password = st.text_input("Password:", type="password")
+    password = st.text_input("Inserisci la password per entrare:", type="password")
     if st.button("Entra"):
         if password == "RB2026":
             st.session_state.autenticato = True
+            st.success("Accesso eseguito!")
             st.rerun()
         else:
-            st.error("Password errata")
+            st.error("Password errata. Riprova.")
     st.stop()
 
-# --- DATABASE ---
+# --- DATABASE IN MEMORIA ---
 if 'clienti' not in st.session_state:
     st.session_state.clienti = []
 if 'pratiche' not in st.session_state:
     st.session_state.pratiche = []
 
-# --- FUNZIONE NOTIFICHE ---
-def check_scadenze():
+# --- FUNZIONE NOTIFICHE SCADENZE ---
+def ottieni_notifiche():
     oggi = date.today()
     avvisi = []
     for c in st.session_state.clienti:
         if c.get("Attivo", True) and c.get("Scadenza_Doc"):
             giorni = (c["Scadenza_Doc"] - oggi).days
+            data_f = c["Scadenza_Doc"].strftime('%d/%m/%Y')
             if 0 <= giorni <= 30:
-                avvisi.append(f"⚠️ {c['Nome']}: {c['Tipo_Doc']} in scadenza tra {giorni} giorni!")
+                avvisi.append(f"⚠️ {c['Nome']}: {c['Tipo_Doc']} in scadenza il {data_f} ({giorni} gg)")
             elif giorni < 0:
-                avvisi.append(f"🚨 {c['Nome']}: {c['Tipo_Doc']} SCADUTO!")
+                avvisi.append(f"🚨 {c['Nome']}: {c['Tipo_Doc']} SCADUTO il {data_f}!")
     return avvisi
 
-# --- MENU ---
+# --- SIDEBAR (Menu) ---
 st.sidebar.title("🏛️ Studio RBertin")
-menu = st.sidebar.radio("VAI A:", ["Dashboard", "Anagrafica Clienti", "Nuova Pratica", "Archivio"])
+menu = st.sidebar.radio("VAI A:", ["Dashboard", "Anagrafica Clienti", "Nuova Pratica", "Archivio Pratiche"])
 
-# 1. DASHBOARD
+# --- 1. DASHBOARD ---
 if menu == "Dashboard":
-    st.header("📊 Dashboard Riepilogo")
-    notifiche = check_scadenze()
+    st.header("📊 Riepilogo Studio")
+    notifiche = ottieni_notifiche()
     if notifiche:
-        for n in notifiche: st.warning(n)
-    else: st.success("✅ Nessuna scadenza imminente.")
-    
-    col1, col2 = st.columns(2)
-    col1.metric("Clienti Totali", len(st.session_state.clienti))
-    col2.metric("Pratiche Aperte", len(st.session_state.pratiche))
+        st.subheader("🔔 Avvisi Scadenze")
+        for n in notifiche:
+            st.warning(n)
+    else:
+        st.success("✅ Nessuna scadenza imminente (prossimi 30 giorni).")
 
-# 2. ANAGRAFICA (Qui ho rimesso tutto nel dettaglio)
+    col1, col2, col3 = st.columns(3)
+    clienti_attivi = [c for c in st.session_state.clienti if c.get("Attivo", True)]
+    col1.metric("Clienti Attivi", len(clienti_attivi))
+    col2.metric("Pratiche Totali", len(st.session_state.pratiche))
+    col3.metric("Oggi", date.today().strftime('%d/%m/%Y'))
+
+# --- 2. ANAGRAFICA CLIENTI ---
 elif menu == "Anagrafica Clienti":
     st.header("👥 Gestione Anagrafica")
     
-    with st.expander("➕ Inserisci Nuovo Cliente"):
-        c1, c2, c3 = st.columns(3)
-        with c1:
+    with st.expander("➕ Aggiungi / Modifica Cliente"):
+        col1, col2, col3 = st.columns(3)
+        with col1:
             st.subheader("Dati Personali")
             nome = st.text_input("Nome e Cognome")
-            nascita_data = st.date_input("Data di Nascita", value=date(1980,1,1))
-            nascita_luogo = st.text_input("Luogo di Nascita")
             cf = st.text_input("Codice Fiscale")
-            indirizzo = st.text_input("Indirizzo Residenza")
+            nascita_data = st.date_input("Data di Nascita", value=date(1985,1,1), format="DD/MM/YYYY")
+            nascita_luogo = st.text_input("Luogo di Nascita")
+            residenza = st.text_input("Indirizzo Residenza")
             attivo = st.toggle("Cliente Attivo", value=True)
         
-        with c2:
+        with col2:
             st.subheader("Contatti & Note")
             tel = st.text_input("Telefono")
-            email = st.text_input("Email")
+            mail = st.text_input("Email")
             pec = st.text_input("PEC")
-            note = st.text_area("Note sul cliente (es. preferenze, orari)")
+            note = st.text_area("Note Cliente (Promemoria)")
         
-        with c3:
-            st.subheader("Documentazione")
-            tipo_doc = st.selectbox("Documento", ["Carta Identità", "Passaporto", "Permesso di Soggiorno", "Patente"])
+        with col3:
+            st.subheader("Documento")
+            tipo_doc = st.selectbox("Tipo Documento", ["Carta d'Identità", "Passaporto", "Permesso di Soggiorno", "Patente"])
             num_doc = st.text_input("Numero Documento")
-            scadenza_doc = st.date_input("Scadenza Documento")
-            carica_doc = st.file_uploader("Carica File (Scansione)", type=['pdf', 'jpg', 'png'])
+            scadenza_doc = st.date_input("Data di Scadenza", format="DD/MM/YYYY")
+            file_doc = st.file_uploader("Carica scansione (PDF/JPG)", type=["pdf", "jpg", "png"])
 
-        if st.button("Salva nel Database"):
-            st.session_state.clienti.append({
-                "Nome": nome, "Nascita": nascita_data, "Luogo": nascita_luogo,
-                "CF": cf, "Indirizzo": indirizzo, "Attivo": attivo,
-                "Telefono": tel, "Email": email, "PEC": pec, "Note": note,
-                "Tipo_Doc": tipo_doc, "Num_Doc": num_doc, "Scadenza_Doc": scadenza_doc
-            })
-            st.success("Cliente salvato correttamente!")
+        if st.button("Salva Cliente"):
+            if nome and cf:
+                st.session_state.clienti.append({
+                    "Nome": nome, "CF": cf, "Nascita": nascita_data, "Luogo": nascita_luogo,
+                    "Residenza": residenza, "Telefono": tel, "Email": mail, "PEC": pec, 
+                    "Attivo": attivo, "Tipo_Doc": tipo_doc, "Num_Doc": num_doc, 
+                    "Scadenza_Doc": scadenza_doc, "Note": note
+                })
+                st.success(f"Cliente {nome} salvato!")
+            else:
+                st.error("Nome e Codice Fiscale sono obbligatori!")
 
     if st.session_state.clienti:
-        st.write("---")
         st.subheader("Lista Clienti")
-        df = pd.DataFrame(st.session_state.clienti)
+        df = pd.DataFrame(st.session_state.clienti).copy()
+        df["Nascita"] = df["Nascita"].apply(lambda x: x.strftime('%d/%m/%Y'))
+        df["Scadenza_Doc"] = df["Scadenza_Doc"].apply(lambda x: x.strftime('%d/%m/%Y'))
         st.dataframe(df, use_container_width=True)
 
-# 3. NUOVA PRATICA
+# --- 3. NUOVA PRATICA (Con Checklist rimesse) ---
 elif menu == "Nuova Pratica":
-    st.header("📂 Apertura Pratica / Delega")
+    st.header("📂 Nuova Pratica")
     if not st.session_state.clienti:
-        st.warning("Inserisci prima un cliente in Anagrafica.")
+        st.warning("Aggiungi un cliente in anagrafica prima.")
     else:
-        nomi_attivi = [c["Nome"] for c in st.session_state.clienti if c.get("Attivo", True)]
+        nomi_attivi = [c["Nome"] for c in st.session_state.clienti if c["Attivo"]]
         scelto = st.selectbox("Seleziona Cliente", nomi_attivi)
-        macro = st.selectbox("Tipo Pratica", ["FISCO", "CONSOLARI", "PUBBLICA AMMINISTRAZIONE", "VARIE"])
-        dettaglio = st.text_area("Dettaglio Pratica / Oggetto Delega")
+        macro = st.selectbox("Categoria", ["FISCO", "CONSOLARI", "PUBBLICA AMMINISTRAZIONE", "VARIE"])
+        
+        # Checklist dinamiche come richiesto inizialmente
+        checklist = []
+        if macro == "FISCO":
+            checklist = ["Fatture/Ricevute", "Documento d'identità", "Delega firmata"]
+        elif macro == "CONSOLARI":
+            checklist = ["Passaporto originale", "Foto tessere", "Modulo Ministero"]
+        elif macro == "PUBBLICA AMMINISTRAZIONE":
+            checklist = ["Tessera Sanitaria", "Certificato Residenza", "Delega"]
+        elif macro == "VARIE":
+            checklist = ["Documentazione base", "Pagamento ricevuto"]
+
+        for item in checklist:
+            st.checkbox(item, key=f"{scelto}_{item}")
+            
+        dettaglio = st.text_area("Oggetto della Delega / Note Pratica")
         
         if st.button("Avvia Pratica"):
             st.session_state.pratiche.append({
-                "Data": date.today(), "Cliente": scelto, 
-                "Tipo": macro, "Dettaglio": dettaglio, "Stato": "Aperta"
+                "Data": date.today().strftime('%d/%m/%Y'), "Cliente": scelto, 
+                "Categoria": macro, "Oggetto": dettaglio, "Stato": "Aperta"
             })
-            st.success("Pratica registrata nell'Archivio!")
+            st.balloons()
+            st.success("Pratica registrata correttamente!")
 
-# 4. ARCHIVIO
-elif menu == "Archivio":
-    st.header("🗄️ Archivio Storico")
+# --- 4. ARCHIVIO ---
+elif menu == "Archivio Pratiche":
+    st.header("🗄️ Archivio")
     if st.session_state.pratiche:
         st.dataframe(pd.DataFrame(st.session_state.pratiche), use_container_width=True)
     else:
-        st.info("L'archivio è vuoto.")
+        st.info("Nessuna pratica registrata.")
