@@ -127,7 +127,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE
+# 2. SISTEMA DE BACK-END: GOOGLE DRIVE (COM PROTEÇÃO REFORÇADA)
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -135,11 +135,17 @@ def init_google_drive():
     try:
         if "gcp_service_account" not in st.secrets:
             return None, "Secret gcp_service_account não encontrada."
-        info = st.secrets["gcp_service_account"]
+        
+        # --- PROTEÇÃO PARA A CHAVE ---
+        info = dict(st.secrets["gcp_service_account"])
+        if "private_key" in info:
+            # Converte os \n em quebras de linha reais
+            info["private_key"] = info["private_key"].replace("\\n", "\n")
+            
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
         return build('drive', 'v3', credentials=creds), None
     except Exception as e:
-        return None, str(e)
+        return None, f"Erro de Autenticação: {str(e)}"
 
 def manage_drive_structure(nome_cliente, srb_code):
     service, err = init_google_drive()
@@ -249,7 +255,7 @@ elif menu == "👥 Anagrafica Clienti":
                     doc_entries.append({"tipo": d_name, "num": n_val, "scad": s_val})
 
         st.subheader("📤 Upload Documenti (Lotto)")
-        uploaded_files = st.file_uploader("Seleziona tutti i file dei documentos acima", accept_multiple_files=True)
+        uploaded_files = st.file_uploader("Seleziona todos os arquivos", accept_multiple_files=True)
 
         st.subheader("📝 ANNOTAZIONI")
         notas = st.text_area("Note e dettagli...", height=100)
