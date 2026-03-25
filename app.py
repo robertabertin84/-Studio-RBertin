@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS ATUALIZADO - Correção forte para todos os menus suspensos
+# CSS ATUALIZADO - Correção forte para os quadrados de Upload
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -49,42 +49,44 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== CORREÇÃO FORTE PARA TODOS OS MENUS SUSPENSOS (Tipo Doc, Regione, etc.) ==================== */
-    /* Campo fechado do selectbox */
-    div[data-baseweb="select"] > div,
-    .stSelectbox > div > div {
-        background-color: #f3f2f1 !important;
-        color: black !important;
-        border: 1px solid #bc9e92 !important;
-    }
-
-    /* Menu dropdown aberto (lista que desce) */
-    div[role="listbox"],
-    div[role="listbox"] ul,
+    /* ==================== MENUS SUSPENSOS (já perfeito) ==================== */
+    div[role="listbox"], 
+    div[role="listbox"] ul, 
     div[role="listbox"] li,
     div[data-baseweb="menu"],
     [data-baseweb="popover"],
-    ul[data-testid="stSelectboxVirtualDropdown"] {
+    [data-baseweb="select"] > div {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
-
-    /* Hover nos itens do menu */
-    div[role="listbox"] li:hover,
-    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+    div[role="listbox"] li:hover {
         background-color: #e8e6e4 !important;
     }
 
-    /* ==================== ELIMINAÇÃO TOTAL DA CAIXA PRETA DO UPLOAD ==================== */
+    /* ==================== CORREÇÃO FORTE PARA OS QUADRADOS DE UPLOAD (Browse files) ==================== */
+    /* Remove completamente a caixa escura de drag & drop */
+    [data-testid="stFileUploader"] section[data-testid="stFileUploadDropzone"] {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Esconde totalmente as instruções "Drag and drop file here" e "Limit 200MB" */
+    [data-testid="stFileUploadDropzoneInstructions"] {
+        display: none !important;
+    }
+
+    /* Garante que o container do uploader fique limpo */
     [data-testid="stFileUploader"] {
         background-color: transparent !important;
         border: none !important;
         padding: 0 !important;
-        margin-top: 10px !important;
+        margin-top: 8px !important;
     }
-    [data-testid="stFileUploaderSection"] {
-        display: none !important;
-    }
+
+    /* Botão Browse files limpo e na cor SRB */
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -92,9 +94,10 @@ st.markdown("""
         border-radius: 4px !important;
         border: 1px solid #a88a7e !important;
         height: 42px !important;
+        font-weight: 700 !important;
     }
 
-    /* Redução de espaço */
+    /* Redução de espaço entre colunas */
     [data-testid="column"] {
         padding: 0 5px !important;
     }
@@ -288,4 +291,3 @@ elif menu == "🗄️ Archivio":
     st.header("🗄️ Archivio Documentale Drive")
     for c in st.session_state.clienti:
         st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri Cartella]({c['Link']})")
-            
