@@ -48,11 +48,30 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Menus Suspensos */
-    div[data-baseweb="select"] > div, .stSelectbox > div > div {
+    /* ==================== CORREZIONE MENUS A TENDINA (Regione e altri) ==================== */
+    /* Campo chiuso del select */
+    div[data-baseweb="select"] > div,
+    .stSelectbox > div > div {
         background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
+    }
+
+    /* Menu dropdown aperto (lista che scende) */
+    div[role="listbox"],
+    div[role="listbox"] ul,
+    div[role="listbox"] li,
+    div[data-baseweb="menu"],
+    [data-baseweb="popover"],
+    ul[data-testid="stSelectboxVirtualDropdown"] {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+    }
+
+    /* Hover sugli elementi del menu */
+    div[role="listbox"] li:hover,
+    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+        background-color: #e8e6e4 !important;
     }
 
     /* Upload */
@@ -62,7 +81,7 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* Métricas */
+    /* Métriche */
     [data-testid="stMetric"] {
         background-color: #eaddd7 !important;
         padding: 15px !important;
@@ -70,7 +89,7 @@ st.markdown("""
         border: 2px solid #bc9e92 !important;
     }
 
-    /* Botões */
+    /* Bottoni */
     button, [data-testid="baseButton-primary"] {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -189,11 +208,9 @@ elif menu == "👥 Anagrafica Clienti":
         with st.expander("📄 DOCUMENTI", expanded=True):
             st.markdown("<p style='font-size: 13px;'>Inserisci numeri e scadenze. Carica i file nel campo in basso.</p>", unsafe_allow_html=True)
             
-            # DOCUMENTOS FIXOS COM ESPAÇAMENTO ELIMINADO
             DOCS_FIXOS = ["Carta d'Identità", "Permesso di Soggiorno", "Patente Italiana", "Tessera Sanitaria", "Passaporto Brasiliano"]
             
             doc_entries = []
-            # Ajuste de colunas para aproximar o nome do número (0.8 para o nome)
             h1, h2, h3 = st.columns([0.8, 1.2, 1.0])
             h1.markdown("**Documento**")
             h2.markdown("**Numero**")
