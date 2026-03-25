@@ -127,7 +127,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE (COM PROTEÇÃO REFORÇADA)
+# 2. SISTEMA DE BACK-END: GOOGLE DRIVE (PROTEZIONE ATTIVA)
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -136,10 +136,10 @@ def init_google_drive():
         if "gcp_service_account" not in st.secrets:
             return None, "Secret gcp_service_account não encontrada."
         
-        # --- PROTEÇÃO PARA A CHAVE ---
         info = dict(st.secrets["gcp_service_account"])
+        
+        # Proteção: converte \n de texto em quebras reais
         if "private_key" in info:
-            # Converte os \n em quebras de linha reais
             info["private_key"] = info["private_key"].replace("\\n", "\n")
             
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
@@ -258,7 +258,7 @@ elif menu == "👥 Anagrafica Clienti":
         uploaded_files = st.file_uploader("Seleziona todos os arquivos", accept_multiple_files=True)
 
         st.subheader("📝 ANNOTAZIONI")
-        notas = st.text_area("Note e dettagli...", height=100)
+        notas = st.text_area("Note e detalhes...", height=100)
 
         if st.button("🚀 REGISTRA CLIENTE E SINCRONIZZA DRIVE"):
             if nome and cf:
