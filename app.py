@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 from datetime import datetime, date
 import io
@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS FORTE - Corrige menu suspenso + quadrado Browse files
+# CSS ATUALIZADO - Apenas as correções solicitadas
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -26,74 +26,72 @@ st.markdown("""
         background-color: #f4e7e1 !important; 
     }
 
-    /* Expanders */
+    /* Barras de Título (Expanders) */
     .st-emotion-cache-p6495m, .st-emotion-cache-1h9bt9w, [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
         border-radius: 8px !important;
         border: 1px solid #a88a7e !important;
         padding: 12px !important;
+        font-size: 16px !important;
     }
-
-    /* Texto geral */
+    
+    /* Texto em Preto Negrito */
     label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
         color: black !important; 
         font-weight: 700 !important;
     }
 
-    /* Inputs normais */
+    /* Inputs e DateInput */
     input, textarea, [data-baseweb="input"], .stDateInput div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== 1. MENUS SUSPENSOS (Tipo Doc e Regione) ==================== */
-    [data-baseweb="select"] > div,
-    div[role="listbox"],
-    div[role="listbox"] ul,
+    /* ==================== CORREÇÃO DO MENU REGIONE ==================== */
+    /* Fundo do dropdown aberto */
+    div[role="listbox"], 
+    div[role="listbox"] ul, 
     div[role="listbox"] li,
     div[data-baseweb="menu"],
-    [data-baseweb="popover"],
-    .stSelectbox div {
+    [data-baseweb="popover"] {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
 
-    div[role="listbox"] li:hover {
-        background-color: #e0dedb !important;
+    /* Fundo do campo fechado do select (Regione) */
+    [data-baseweb="select"] > div {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+        border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== 2. QUADRADOS DE UPLOAD (Browse files) ==================== */
-    /* Remove fundo escuro da área inteira de upload */
-    [data-testid="stFileUploader"] > div,
-    [data-testid="stFileUploadDropzone"],
-    section[data-testid="stFileUploadDropzone"] {
+    /* Hover no menu */
+    div[role="listbox"] li:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    /* ==================== ELIMINAÇÃO TOTAL DA CAIXA PRETA DO UPLOAD ==================== */
+    [data-testid="stFileUploader"] {
         background-color: transparent !important;
         border: none !important;
-        box-shadow: none !important;
-        min-height: auto !important;
         padding: 0 !important;
+        margin-top: 10px !important;
     }
-
-    /* Esconde texto "Drag and drop file here" e limite */
-    [data-testid="stFileUploadDropzoneInstructions"],
-    [data-testid="stFileUploader"] p {
-        display: none !important;
+    [data-testid="stFileUploaderSection"] {
+        display: none !important; /* Remove a caixa preta gigante */
     }
-
-    /* Botão Browse files limpo */
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
         width: 100% !important;
-        height: 42px !important;
         border-radius: 4px !important;
         border: 1px solid #a88a7e !important;
-        font-weight: 700 !important;
+        height: 42px !important;
     }
 
-    /* Espaçamento */
+    /* Redução de espaço */
     [data-testid="column"] {
         padding: 0 5px !important;
     }
@@ -101,7 +99,7 @@ st.markdown("""
         gap: 0.3rem !important;
     }
 
-    /* Métricas e botões */
+    /* Métricas */
     [data-testid="stMetric"] {
         background-color: #eaddd7 !important;
         padding: 15px !important;
@@ -109,6 +107,7 @@ st.markdown("""
         border: 2px solid #bc9e92 !important;
     }
 
+    /* Botões Gerais */
     button, [data-testid="baseButton-primary"] {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -118,7 +117,8 @@ st.markdown("""
         background-color: #a88a7e !important; 
     }
 
-    header, footer { visibility: hidden; }
+    header { visibility: hidden; }
+    footer { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -128,6 +128,7 @@ st.markdown("""
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 def init_google_drive():
+    """Inicialização segura dos serviços Google"""
     try:
         if "gcp_service_account" not in st.secrets:
             return None, "Secret gcp_service_account não encontrada."
@@ -138,6 +139,7 @@ def init_google_drive():
         return None, str(e)
 
 def manage_drive_structure(nome_cliente, srb_code):
+    """Criação automatizada de pastas hierárquicas"""
     service, err = init_google_drive()
     if err: return None, err
     
@@ -164,6 +166,7 @@ def manage_drive_structure(nome_cliente, srb_code):
         return None, f"Errore Drive: {e}"
 
 def upload_to_client_folder(file_obj, folder_id):
+    """Upload silencioso para o Drive"""
     service, _ = init_google_drive()
     if not service: return False
     try:
@@ -204,6 +207,7 @@ TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patent
 st.sidebar.markdown("<h2 style='text-align: center;'>Menu Studio</h2>", unsafe_allow_html=True)
 menu = st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"])
 
+# --- DASHBOARD ---
 if menu == "📊 Dashboard":
     st.header("📊 Stato Generale dello Studio")
     m1, m2, m3, m4 = st.columns(4)
@@ -220,6 +224,7 @@ if menu == "📊 Dashboard":
             df_cli = pd.DataFrame(st.session_state.clienti)
             st.bar_chart(df_cli['Regione'].value_counts())
 
+# --- ANAGRAFICA CLIENTI ---
 elif menu == "👥 Anagrafica Clienti":
     st.header("👥 Gestione Anagrafica e Documentale")
     t_aba1, t_aba2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
@@ -275,6 +280,7 @@ elif menu == "👥 Anagrafica Clienti":
         if st.session_state.clienti:
             st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
+# --- OUTRAS PÁGINAS ---
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
     
