@@ -5,24 +5,24 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 # ==========================================
-# 1. CONFIGURAZIONE ESTETICA (UNIFICATA)
+# 1. CONFIGURAZIONE ESTETICA (FORZA TOTALE)
 # ==========================================
 st.set_page_config(page_title="Studio R Bertin", layout="wide")
 
 st.markdown("""
     <style>
-    /* Fundo Total e Lateral Creme #f4e7e1 */
+    /* 1. Fundo Global e Lateral Creme */
     .stApp, [data-testid="stSidebar"], [data-testid="stSidebarContent"] { 
         background-color: #f4e7e1 !important; 
     }
 
-    /* Texto Preto para leitura */
+    /* 2. Texto Preto em Tudo */
     label, p, h1, h2, h3, h4, span, li, div, .stMarkdown { 
         color: black !important; 
         font-weight: 500;
     }
 
-    /* Centralização e Estilo do Card de Login */
+    /* 3. Centralização e Caixa de Login */
     [data-testid="stForm"] {
         max-width: 400px;
         margin-left: auto;
@@ -33,28 +33,39 @@ st.markdown("""
         border: 2px solid #bc9e92 !important;
     }
 
-    /* BARRA LATERAL: Cor Bege #bc9e92 */
+    /* 4. FORÇAR COR DO BOTÃO (QUALQUER BOTÃO) */
+    /* Isso cobre botões normais e botões de formulário */
+    button, [data-testid="baseButton-primary"], [data-testid="baseButton-secondary"], .stButton>button {
+        background-color: #bc9e92 !important;
+        color: black !important;
+        border: 1px solid #a88a7e !important;
+        font-weight: bold !important;
+        opacity: 1 !important;
+    }
+    
+    /* Garantir que o texto continue preto no hover (passar o mouse) */
+    button:hover {
+        border: 1px solid black !important;
+        color: black !important;
+    }
+
+    /* 5. FORÇAR COR DO OLHINHO (👁️) */
+    button[aria-label="Show password"] {
+        background-color: #bc9e92 !important;
+        color: black !important;
+    }
+    button[aria-label="Show password"] svg {
+        fill: black !important;
+    }
+
+    /* 6. Barra Lateral e Itens de Menu */
     [data-testid="stSidebarNavItems"] li {
         background-color: #bc9e92 !important;
         margin-bottom: 8px;
         border-radius: 8px;
     }
 
-    /* FORÇAR COR DO BOTÃO (BEGE #bc9e92) */
-    div.stButton > button, button[kind="primaryFormSubmit"], .stButton>button {
-        background-color: #bc9e92 !important;
-        color: black !important;
-        border: 1px solid #a88a7e !important;
-        font-weight: bold !important;
-    }
-
-    /* FORÇAR COR DO OLHINHO (BEGE #bc9e92) */
-    button[aria-label="Show password"] {
-        background-color: #bc9e92 !important;
-        color: black !important;
-    }
-    
-    /* Inputs Brancos para contraste */
+    /* 7. Inputs Brancos */
     input, .stSelectbox div {
         background-color: white !important;
         color: black !important;
@@ -65,7 +76,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNZIONI GOOGLE SERVICES ---
+# --- FUNZIONI GOOGLE SERVICES (FULL) ---
 def get_google_service(name, version, scopes):
     try:
         info = st.secrets["gcp_service_account"]
@@ -95,7 +106,7 @@ def upload_to_drive(file, folder_id):
     return media.get('id')
 
 # ==========================================
-# 2. LOGIN CENTRALIZADO
+# 2. LOGIN CENTRALIZADO (Studio R Bertin)
 # ==========================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 
@@ -104,6 +115,7 @@ if not st.session_state.autenticato:
     with st.form("login_form"):
         st.markdown("<h2 style='text-align: center;'>⚖️ Studio R Bertin</h2>", unsafe_allow_html=True)
         pwd = st.text_input("Password:", type="password")
+        # Botão de Login
         if st.form_submit_button("Entra"):
             if pwd == "RB2026": 
                 st.session_state.autenticato = True
@@ -126,25 +138,25 @@ menu = st.sidebar.radio("NAVIGAZIONE", ["Dashboard", "Anagrafica Clienti", "Nuov
 
 # --- DASHBOARD ---
 if menu == "Dashboard":
-    st.header("📊 Riepilogo Statistiche Studio")
+    st.header("📊 Riepilogo Statistiche")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("👥 Totale Clienti", len(st.session_state.clienti))
-    c2.metric("📂 Totale Pratiche", len(st.session_state.pratiche))
+    c1.metric("👥 Clienti", len(st.session_state.clienti))
+    c2.metric("📂 Pratiche", len(st.session_state.pratiche))
     c3.metric("🔓 Aperte", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta"))
     c4.metric("🔒 Chiuse", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Chiusa"))
     
     st.write("---")
-    st.subheader("📍 Distribuzione Geografica")
+    st.subheader("📍 Distribuição Geográfica")
     if st.session_state.clienti:
         df = pd.DataFrame(st.session_state.clienti)
         st.bar_chart(df['Regione'].value_counts(), color="#bc9e92")
     else:
-        st.info("Nessun dato registrato.")
+        st.info("In attesa de novos dados.")
 
 # --- ANAGRAFICA ---
 elif menu == "Anagrafica Clienti":
-    st.header("👥 Gestione Clienti e Documenti")
-    t1, t2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
+    st.header("👥 Gestione Anagrafica")
+    t1, t2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti"])
     
     with t1:
         with st.expander("📍 DATI PERSONALI", expanded=True):
@@ -156,9 +168,7 @@ elif menu == "Anagrafica Clienti":
             email = col1.text_input("Email")
         
         st.subheader("🗂️ DOCUMENTI")
-        with st.expander("📄 Caricamento File (Drive)", expanded=False):
-            tipo_doc = st.selectbox("Tipo Documento", DOC_TYPES)
-            f_doc = st.file_uploader("Seleziona File")
+        f_doc = st.file_uploader("Carica Documento para o Drive")
 
         if st.button("🚀 SALVA CLIENTE"):
             if nome and cf:
@@ -169,45 +179,31 @@ elif menu == "Anagrafica Clienti":
                 
                 st.session_state.clienti.append({
                     "ID": srb_id, "Nome": nome, "CF": cf, "Regione": reg, 
-                    "Tel": tel, "Email": email,
-                    "Drive_URL": folder['webViewLink'] if folder else "#"
+                    "Tel": tel, "Drive_URL": folder['webViewLink'] if folder else "#"
                 })
-                st.success(f"✅ Cliente {srb_id} salvato com sucesso!")
+                st.success(f"✅ Cliente {srb_id} salvo!")
             else:
-                st.error("Nome e Codice Fiscale são obrigatórios!")
+                st.error("Campos obrigatórios faltando.")
 
     with t2:
         if st.session_state.clienti:
-            df_c = pd.DataFrame(st.session_state.clienti)
-            st.dataframe(df_c[["ID", "Nome", "Regione", "Tel"]], use_container_width=True)
-            sel_id = st.selectbox("Dettagli Cliente (ID):", df_c["ID"])
-            cli = next(c for c in st.session_state.clienti if c["ID"] == sel_id)
-            st.markdown(f"🔗 [Apri Cartella Google Drive]({cli['Drive_URL']})")
+            st.dataframe(pd.DataFrame(st.session_state.clienti)[["ID", "Nome", "Regione"]], use_container_width=True)
         else:
-            st.info("Nessun cliente registrato.")
+            st.info("Nessun cliente in lista.")
 
 # --- PRATICHE ---
 elif menu == "Nuova Pratica":
-    st.header("📂 Gestione Pratiche")
-    if not st.session_state.clienti:
-        st.warning("Registra prima um cliente!")
+    st.header("📂 Apertura Pratica")
+    if st.session_state.clienti:
+        cli = st.selectbox("Cliente", [c["Nome"] for c in st.session_state.clienti])
+        if st.button("Crea Nuova Pratica"):
+            st.session_state.pratiche.append({"Cliente": cli, "Stato": "Aperta"})
+            st.success("Pratica Aperta!")
     else:
-        with st.form("pratica_form"):
-            c_nome = st.selectbox("Seleziona Cliente", [c["Nome"] for c in st.session_state.clienti])
-            tipo_p = st.selectbox("Tipo Pratica", ["FISCO", "CONSOLARI", "PA", "ALTRO"])
-            desc = st.text_area("Descrizione")
-            status = st.radio("Stato Iniciale", ["Aperta", "In Corso"], horizontal=True)
-            if st.form_submit_button("Crea Pratica"):
-                st.session_state.pratiche.append({
-                    "Data": date.today().strftime("%d/%m/%Y"),
-                    "Cliente": c_nome, "Tipo": tipo_p, "Stato": status
-                })
-                st.success("Pratica creata!")
+        st.warning("Crea prima um cliente.")
 
 # --- ARCHIVIO ---
 elif menu == "Archivio":
-    st.header("🗄️ Archivio Storico")
+    st.header("🗄️ Archivio")
     if st.session_state.pratiche:
-        st.table(pd.DataFrame(st.session_state.pratiche))
-    else:
-        st.info("L'archivio è vuoto.")
+        st.write(pd.DataFrame(st.session_state.pratiche))
