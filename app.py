@@ -16,108 +16,76 @@ st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
     layout="wide",
     initial_sidebar_state="expanded"
-)
-
-# CSS ATUALIZADO - Correção forte para todos os menus suspensos
-st.markdown("""
-    <style>
-    /* Fundo Global */
+/* Fundo Global */
     .stApp, [data-testid="stSidebar"], [data-testid="stSidebarContent"] { 
         background-color: #f4e7e1 !important; 
     }
 
     /* Barras de Título (Expanders) */
-    .st-emotion-cache-p6495m, .st-emotion-cache-1h9bt9w, [data-testid="stExpander"] details summary {
+    [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
         border-radius: 8px !important;
         border: 1px solid #a88a7e !important;
         padding: 12px !important;
-        font-size: 16px !important;
     }
     
     /* Texto em Preto Negrito */
-    label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
+    label, p, h1, h2, h3, h4, span, li, div, .stMarkdown { 
         color: black !important; 
         font-weight: 700 !important;
     }
 
-    /* Inputs e DateInput */
-    input, textarea, [data-baseweb="input"], .stDateInput div {
+    /* Inputs e Selectbox com Fundo Branco (Correção de Menus) */
+    input, [data-baseweb="input"], .stDateInput div, div[data-baseweb="select"] > div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== CORREÇÃO FORTE PARA TODOS OS MENUS SUSPENSOS (Tipo Doc, Regione, etc.) ==================== */
-    /* Campo fechado do selectbox */
-    div[data-baseweb="select"] > div,
-    .stSelectbox > div > div {
-        background-color: #f3f2f1 !important;
-        color: black !important;
-        border: 1px solid #bc9e92 !important;
-    }
-
-    /* Menu dropdown aberto (lista que desce) */
-    div[role="listbox"],
-    div[role="listbox"] ul,
-    div[role="listbox"] li,
-    div[data-baseweb="menu"],
-    [data-baseweb="popover"],
-    ul[data-testid="stSelectboxVirtualDropdown"] {
-        background-color: #f3f2f1 !important;
+    /* Dropdown do menu aberto (Região/Documento) */
+    div[role="listbox"], ul[data-testid="stSelectboxVirtualDropdown"] {
+        background-color: white !important;
         color: black !important;
     }
 
-    /* Hover nos itens do menu */
-    div[role="listbox"] li:hover,
-    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
-        background-color: #e8e6e4 !important;
-    }
-
-    /* ==================== ELIMINAÇÃO TOTAL DA CAIXA PRETA DO UPLOAD ==================== */
+    /* ==================== REMOÇÃO DA CAIXA PRETA DE UPLOAD ==================== */
     [data-testid="stFileUploader"] {
         background-color: transparent !important;
         border: none !important;
-        padding: 0 !important;
-        margin-top: 10px !important;
     }
+    
+    /* Esconde o fundo preto, o ícone e o texto "Drag and drop" */
     [data-testid="stFileUploaderSection"] {
+        background-color: transparent !important;
+        border: none !important;
+    }
+    [data-testid="stFileUploaderSection"] > div:first-child,
+    [data-testid="stFileUploaderSection"] small {
         display: none !important;
     }
+
+    /* Estiliza apenas o botão BROWSE FILES */
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
-        width: 100% !important;
-        border-radius: 4px !important;
         border: 1px solid #a88a7e !important;
-        height: 42px !important;
+        width: 100% !important;
+        height: 40px !important;
+        margin-top: 18px !important; /* Alinha com os campos ao lado */
     }
 
-    /* Redução de espaço */
-    [data-testid="column"] {
-        padding: 0 5px !important;
-    }
+    /* ==================== REDUÇÃO DE ESPAÇO ENTRE CAMPOS ==================== */
     [data-testid="stHorizontalBlock"] {
-        gap: 0.3rem !important;
+        gap: 0.4rem !important; /* Aproxima as colunas de documentos */
+    }
+    
+    [data-testid="column"] {
+        padding: 0 3px !important; /* Remove o vácuo entre os campos */
     }
 
-    /* Métricas */
-    [data-testid="stMetric"] {
-        background-color: #eaddd7 !important;
-        padding: 15px !important;
-        border-radius: 10px !important;
-        border: 2px solid #bc9e92 !important;
-    }
-
-    /* Botões Gerais */
-    button, [data-testid="baseButton-primary"] {
-        background-color: #bc9e92 !important;
-        color: black !important;
-        border: 2px solid #a88a7e !important;
-    }
-    button:hover { 
-        background-color: #a88a7e !important; 
+    header { visibility: hidden; }
+    footer { visibility: hidden; } 
     }
 
     header { visibility: hidden; }
@@ -274,17 +242,20 @@ elif menu == "👥 Anagrafica Clienti":
                         })
                         st.success(f"✅ Cliente {srb_code} salvato con successo!")
                     else: st.error(f"Errore Drive: {error}")
-            else: st.error("Inserire almeno Nome e Codice Fiscale!")
-
-    with t_aba2:
-        if st.session_state.clienti:
-            st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
-
-# --- OUTRAS PÁGINAS ---
-elif menu == "📂 Nuova Pratica":
-    st.header("📂 Apertura Nuova Pratica")
-    
-elif menu == "🗄️ Archivio":
+for i in range(1, 5):
+                # Proporções ajustadas: Tipo(1.1), Número(1.1), Data(0.7), Botão(1.1)
+                d1, d2, d3, d4 = st.columns([1.1, 1.1, 0.7, 1.1])
+                with d1:
+                    tipo = st.selectbox(f"Tipo Doc {i}", TIPOS_DOC, key=f"t_doc_{i}", label_visibility="collapsed")
+                with d2:
+                    num = st.text_input(f"Numero Doc {i}", key=f"n_doc_{i}", label_visibility="collapsed", placeholder="Nº Documento")
+                with d3:
+                    scad = st.date_input(f"Scadenza {i}", value=date.today(), key=f"s_doc_{i}", label_visibility="collapsed")
+                with d4:
+                    file = st.file_uploader(f"Upload {i}", key=f"f_doc_{i}", label_visibility="collapsed")
+                
+                if tipo and num:
+                    doc_list.append({"tipo": tipo, "num": num, "scad": scad, "file": file})
     st.header("🗄️ Archivio Documentale Drive")
     for c in st.session_state.clienti:
         st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri Cartella]({c['Link']})")
