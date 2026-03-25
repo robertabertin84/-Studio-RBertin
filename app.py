@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO (CORREÇÃO TOTAL DE CORES E ESPAÇOS)
+# 1. CONFIGURAZIONE E CSS AVANZATO (CORREÇÃO DA CAIXA PRETA E DISTÂNCIA)
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -48,14 +48,14 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Correção de Menus Suspensos (Selectbox) */
+    /* Menus Suspensos (Fundo Branco Real) */
     div[data-baseweb="select"] > div, .stSelectbox > div > div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    div[role="listbox"], ul[data-testid="stSelectboxVirtualDropdown"], [data-baseweb="popover"] {
+    div[role="listbox"], div[data-baseweb="menu"], [data-baseweb="popover"], ul[data-testid="stSelectboxVirtualDropdown"] {
         background-color: white !important;
         color: black !important;
     }
@@ -66,43 +66,40 @@ st.markdown("""
         border: none !important;
         padding: 0 !important;
     }
+    
+    /* Mata o fundo preto e a área de drop */
     [data-testid="stFileUploaderSection"] {
-        background-color: transparent !important;
-        border: none !important;
-        display: none !important; /* Esconde a zona de arrastar preta */
+        display: none !important;
     }
+
+    /* Estiliza o botão Browse Files */
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
         width: 100% !important;
-        border-radius: 4px !important;
         border: 1px solid #a88a7e !important;
-        height: 40px !important;
+        height: 42px !important;
         margin-top: 0px !important;
     }
 
-    /* Redução de espaço entre colunas */
+    /* ==================== REDUÇÃO DE VÁCUO (ESPAÇOS) ==================== */
     [data-testid="stHorizontalBlock"] {
-        gap: 0.5rem !important;
+        gap: 0.5rem !important; /* Aproxima as colunas lateralmente */
     }
+    
     [data-testid="column"] {
-        padding: 0 2px !important;
+        padding: 0 2px !important; /* Remove o vácuo interno das colunas */
     }
 
-    /* Métricas */
-    [data-testid="stMetric"] {
-        background-color: #eaddd7 !important;
-        padding: 15px !important;
-        border-radius: 10px !important;
-        border: 2px solid #bc9e92 !important;
+    /* Ajuste para alinhar verticalmente o botão de upload com os inputs */
+    [data-testid="stFileUploader"] {
+        margin-top: 28px !important;
     }
 
-    /* Botões Gerais */
-    button, [data-testid="baseButton-primary"] {
-        background-color: #bc9e92 !important;
-        color: black !important;
-        border: 2px solid #a88a7e !important;
-    }
+    /* Métricas e Botões */
+    [data-testid="stMetric"] { background-color: #eaddd7 !important; padding: 15px !important; border-radius: 10px !important; border: 2px solid #bc9e92 !important; }
+    button, [data-testid="baseButton-primary"] { background-color: #bc9e92 !important; color: black !important; border: 2px solid #a88a7e !important; }
+    button:hover { background-color: #a88a7e !important; }
 
     header { visibility: hidden; }
     footer { visibility: hidden; }
@@ -117,12 +114,11 @@ SCOPES = ["https://www.googleapis.com/auth/drive"]
 def init_google_drive():
     try:
         if "gcp_service_account" not in st.secrets:
-            return None, "Secret não encontrada."
+            return None, "Secret gcp_service_account não encontrada."
         info = st.secrets["gcp_service_account"]
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
         return build('drive', 'v3', credentials=creds), None
-    except Exception as e:
-        return None, str(e)
+    except Exception as e: return None, str(e)
 
 def manage_drive_structure(nome_cliente, srb_code):
     service, err = init_google_drive()
@@ -132,11 +128,9 @@ def manage_drive_structure(nome_cliente, srb_code):
         res = service.files().list(q=q).execute()
         folders = res.get('files', [])
         root_id = folders[0]['id'] if folders else service.files().create(body={'name': 'GESTIONALE RBERTIN', 'mimeType': 'application/vnd.google-apps.folder'}, fields='id').execute()['id']
-        
         folder_meta = {'name': f"{srb_code} - {nome_cliente}", 'mimeType': 'application/vnd.google-apps.folder', 'parents': [root_id]}
         return service.files().create(body=folder_meta, fields='id, webViewLink').execute(), None
-    except Exception as e:
-        return None, str(e)
+    except Exception as e: return None, str(e)
 
 def upload_to_client_folder(file_obj, folder_id):
     service, _ = init_google_drive()
@@ -156,17 +150,17 @@ if 'clienti' not in st.session_state: st.session_state.clienti = []
 if 'pratiche' not in st.session_state: st.session_state.pratiche = []
 
 if not st.session_state.autenticato:
-    st.write("<br><br>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1, 1.5, 1])
-    with c2:
-        with st.form("login"):
+    st.write("<br><br><br>", unsafe_allow_html=True)
+    c_log1, c_log2, c_log3 = st.columns([1, 1.5, 1])
+    with c_log2:
+        with st.form("login_form"):
             st.markdown("<h1 style='text-align: center;'>⚖️ Studio R Bertin</h1>", unsafe_allow_html=True)
-            pwd = st.text_input("Password:", type="password")
+            pwd = st.text_input("Inserire Password:", type="password")
             if st.form_submit_button("ACCEDI"):
                 if pwd == "RB2026": 
                     st.session_state.autenticato = True
                     st.rerun()
-                else: st.error("Negato.")
+                else: st.error("Accesso Negato.")
     st.stop()
 
 # ==============================================================================
@@ -175,19 +169,18 @@ if not st.session_state.autenticato:
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria"]
 
-menu = st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"])
+st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"], key="nav_menu")
+menu = st.session_state.nav_menu
 
 if menu == "📊 Dashboard":
-    st.header("📊 Stato Generale")
-    m1, m2, m3, m4 = st.columns(4)
+    st.header("📊 Dashboard")
+    m1, m2 = st.columns(2)
     m1.metric("👥 Clienti", len(st.session_state.clienti))
     m2.metric("📂 Pratiche", len(st.session_state.pratiche))
-    m3.metric("🔓 Aperte", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta"))
-    m4.metric("🔒 Chiuse", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Chiusa"))
 
 elif menu == "👥 Anagrafica Clienti":
-    st.header("👥 Gestione Clienti")
-    t1, t2 = st.tabs(["➕ Registra", "📑 Lista"])
+    st.header("👥 Gestione Anagrafica")
+    t1, t2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti"])
     
     with t1:
         with st.expander("📍 DATI PERSONALI", expanded=True):
@@ -205,40 +198,32 @@ elif menu == "👥 Anagrafica Clienti":
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
         with st.expander("📄 DOCUMENTI", expanded=True):
-            # Títulos das colunas apenas uma vez no topo para economizar espaço
-            h1, h2, h3, h4 = st.columns([1.1, 1.1, 0.7, 1.1])
-            h1.markdown("<p style='font-size:12px'>Tipo</p>", unsafe_allow_html=True)
-            h2.markdown("<p style='font-size:12px'>Numero</p>", unsafe_allow_html=True)
-            h3.markdown("<p style='font-size:12px'>Scadenza</p>", unsafe_allow_html=True)
-            h4.markdown("<p style='font-size:12px'>File</p>", unsafe_allow_html=True)
-            
             doc_list = []
             for i in range(1, 5):
+                # Colunas ajustadas para reduzir o vácuo
                 d1, d2, d3, d4 = st.columns([1.1, 1.1, 0.7, 1.1])
-                tipo = d1.selectbox(f"T{i}", TIPOS_DOC, key=f"t{i}", label_visibility="collapsed")
-                num = d2.text_input(f"N{i}", key=f"n{i}", label_visibility="collapsed")
-                scad = d3.date_input(f"S{i}", value=date.today(), key=f"s{i}", label_visibility="collapsed")
-                file = d4.file_uploader(f"F{i}", key=f"f{i}", label_visibility="collapsed")
+                tipo = d1.selectbox(f"Tipo Doc {i}", TIPOS_DOC, key=f"t_doc_{i}")
+                num = d2.text_input(f"Numero Doc {i}", key=f"n_doc_{i}")
+                scad = d3.date_input(f"Scadenza {i}", value=date.today(), key=f"s_doc_{i}")
+                file = d4.file_uploader(f"Upload {i}", key=f"f_doc_{i}")
                 if tipo and num:
                     doc_list.append({"tipo": tipo, "num": num, "scad": scad, "file": file})
 
-        if st.button("🚀 SALVA CLIENTE"):
+        if st.button("🚀 REGISTRA E SINCRONIZZA"):
             if nome and cf:
                 srb_code = f"SRB{len(st.session_state.clienti)+1:04d}"
-                f_obj, err = manage_drive_structure(nome, srb_code)
-                if f_obj:
+                folder_obj, error = manage_drive_structure(nome, srb_code)
+                if folder_obj:
                     for d in doc_list:
-                        if d['file']: upload_to_client_folder(d['file'], f_obj['id'])
-                    st.session_state.clienti.append({"ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao, "Link": f_obj['webViewLink']})
-                    st.success("Salvato!")
-            else: st.error("Nome/CF mancano!")
+                        if d['file']: upload_to_client_folder(d['file'], folder_obj['id'])
+                    st.session_state.clienti.append({"ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao, "Link": folder_obj['webViewLink']})
+                    st.success("✅ Salvato!")
+            else: st.error("Dati mancanti.")
 
     with t2:
         if st.session_state.clienti: st.dataframe(pd.DataFrame(st.session_state.clienti))
 
-elif menu == "📂 Nuova Pratica":
-    st.header("📂 Nuova Pratica")
 elif menu == "🗄️ Archivio":
-    st.header("🗄️ Archivio")
+    st.header("🗄️ Archivio Drive")
     for c in st.session_state.clienti:
-        st.write(f"📁 {c['ID']} - {c['Nome']} - [Link Drive]({c['Link']})")
+        st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri]({c['Link']})")
