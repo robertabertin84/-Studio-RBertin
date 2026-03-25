@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZADO (Corrigido)
+# 1. CONFIGURAZIONE E CSS AVANZATO
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -18,6 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# CSS - Apenas correção do botão grande
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -47,7 +48,7 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* MENUS SUSPENSOS - Correção forte */
+    /* Menus suspensos */
     [data-baseweb="select"] > div,
     div[role="listbox"], div[role="listbox"] ul, div[role="listbox"] li,
     div[data-baseweb="menu"], [data-baseweb="popover"] {
@@ -58,7 +59,7 @@ st.markdown("""
         background-color: #e8e6e4 !important;
     }
 
-    /* UPLOAD ÚNICO - Remove fundo preto */
+    /* Upload múltiplo */
     [data-testid="stFileUploader"] section,
     [data-testid="stFileUploadDropzone"] {
         background-color: transparent !important;
@@ -73,7 +74,21 @@ st.markdown("""
         height: 48px !important;
         border-radius: 6px !important;
         border: 1px solid #a88a7e !important;
+    }
+
+    /* ==================== CORREÇÃO ESPECÍFICA DO BOTÃO GRANDE ==================== */
+    button[kind="primary"], 
+    .stButton > button {
+        background-color: #bc9e92 !important;
+        color: black !important;
+        border: 2px solid #a88a7e !important;
         font-weight: 700 !important;
+        height: 52px !important;
+        font-size: 16px !important;
+    }
+    button[kind="primary"]:hover, 
+    .stButton > button:hover {
+        background-color: #a88a7e !important;
     }
 
     [data-testid="column"] { padding: 0 5px !important; }
@@ -84,7 +99,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. BACK-END GOOGLE DRIVE
+# 2. SISTEMA DE BACK-END: GOOGLE DRIVE E SEGURANÇA
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -125,7 +140,6 @@ def manage_drive_structure(nome_cliente, srb_code):
         return None, f"Errore Drive: {e}"
 
 def upload_to_client_folder(file_obj, folder_id, new_filename):
-    """Upload com nome personalizado"""
     service, _ = init_google_drive()
     if not service: return False
     try:
@@ -137,7 +151,7 @@ def upload_to_client_folder(file_obj, folder_id, new_filename):
         return False
 
 # ==============================================================================
-# 3. LOGIN
+# 3. CONTROLE DE ESTADO E LOGIN
 # ==============================================================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if 'clienti' not in st.session_state: st.session_state.clienti = []
@@ -159,7 +173,7 @@ if not st.session_state.autenticato:
     st.stop()
 
 # ==============================================================================
-# 4. INTERFACE
+# 4. INTERFACE DO GESTIONALE
 # ==============================================================================
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria"]
@@ -220,9 +234,8 @@ elif menu == "👥 Anagrafica Clienti":
                         "scad": scad
                     })
 
-        # === UPLOAD ÚNICO MÚLTIPLO ===
         st.subheader("📤 Upload Único de Documentos")
-        st.info("Selecione todos os arquivos na ordem correspondente às linhas acima (1º arquivo = Tipo Doc 1, 2º arquivo = Tipo Doc 2, etc.)")
+        st.info("Selecione todos os arquivos na ordem correspondente às linhas acima.")
         uploaded_files = st.file_uploader("Carica tutti i documenti", 
                                           accept_multiple_files=True, 
                                           key="multi_upload")
@@ -239,13 +252,10 @@ elif menu == "👥 Anagrafica Clienti":
                     
                     if folder_obj:
                         success_count = 0
-                        
-                        # Faz o match por ordem
                         for idx, file in enumerate(uploaded_files):
                             if idx < len(doc_list):
                                 doc = doc_list[idx]
-                                new_filename = f"{doc['tipo']}_{doc['num']}.pdf"   # pode mudar extensão se necessário
-                                
+                                new_filename = f"{doc['tipo']}_{doc['num']}.pdf"
                                 if upload_to_client_folder(file, folder_obj['id'], new_filename):
                                     success_count += 1
                         
@@ -256,8 +266,7 @@ elif menu == "👥 Anagrafica Clienti":
                             "Regione": regiao,
                             "Link": folder_obj['webViewLink']
                         })
-                        
-                        st.success(f"✅ Cliente {srb_code} registrado com sucesso! {success_count} documento(s) carregado(s).")
+                        st.success(f"✅ Cliente {srb_code} registrato con successo! {success_count} documento(s) caricati.")
                     else:
                         st.error(f"Errore Drive: {error}")
             else:
@@ -267,7 +276,7 @@ elif menu == "👥 Anagrafica Clienti":
         if st.session_state.clienti:
             st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
-# Outras páginas
+# --- OUTRAS PÁGINAS ---
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
     
