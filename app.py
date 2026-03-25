@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS ATUALIZADO - Correção forte para os quadrados de Upload
+# CSS FORTE - Corrige menu suspenso + quadrado Browse files
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -26,78 +26,74 @@ st.markdown("""
         background-color: #f4e7e1 !important; 
     }
 
-    /* Barras de Título (Expanders) */
+    /* Expanders */
     .st-emotion-cache-p6495m, .st-emotion-cache-1h9bt9w, [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
         border-radius: 8px !important;
         border: 1px solid #a88a7e !important;
         padding: 12px !important;
-        font-size: 16px !important;
     }
-    
-    /* Texto em Preto Negrito */
+
+    /* Texto geral */
     label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
         color: black !important; 
         font-weight: 700 !important;
     }
 
-    /* Inputs e DateInput */
+    /* Inputs normais */
     input, textarea, [data-baseweb="input"], .stDateInput div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== MENUS SUSPENSOS (já perfeito) ==================== */
-    div[role="listbox"], 
-    div[role="listbox"] ul, 
+    /* ==================== 1. MENUS SUSPENSOS (Tipo Doc e Regione) ==================== */
+    [data-baseweb="select"] > div,
+    div[role="listbox"],
+    div[role="listbox"] ul,
     div[role="listbox"] li,
     div[data-baseweb="menu"],
     [data-baseweb="popover"],
-    [data-baseweb="select"] > div {
+    .stSelectbox div {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
+
     div[role="listbox"] li:hover {
-        background-color: #e8e6e4 !important;
+        background-color: #e0dedb !important;
     }
 
-    /* ==================== CORREÇÃO FORTE PARA OS QUADRADOS DE UPLOAD (Browse files) ==================== */
-    /* Remove completamente a caixa escura de drag & drop */
-    [data-testid="stFileUploader"] section[data-testid="stFileUploadDropzone"] {
+    /* ==================== 2. QUADRADOS DE UPLOAD (Browse files) ==================== */
+    /* Remove fundo escuro da área inteira de upload */
+    [data-testid="stFileUploader"] > div,
+    [data-testid="stFileUploadDropzone"],
+    section[data-testid="stFileUploadDropzone"] {
         background-color: transparent !important;
         border: none !important;
-        padding: 0 !important;
-        min-height: 0 !important;
         box-shadow: none !important;
+        min-height: auto !important;
+        padding: 0 !important;
     }
 
-    /* Esconde totalmente as instruções "Drag and drop file here" e "Limit 200MB" */
-    [data-testid="stFileUploadDropzoneInstructions"] {
+    /* Esconde texto "Drag and drop file here" e limite */
+    [data-testid="stFileUploadDropzoneInstructions"],
+    [data-testid="stFileUploader"] p {
         display: none !important;
     }
 
-    /* Garante que o container do uploader fique limpo */
-    [data-testid="stFileUploader"] {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        margin-top: 8px !important;
-    }
-
-    /* Botão Browse files limpo e na cor SRB */
+    /* Botão Browse files limpo */
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
         width: 100% !important;
+        height: 42px !important;
         border-radius: 4px !important;
         border: 1px solid #a88a7e !important;
-        height: 42px !important;
         font-weight: 700 !important;
     }
 
-    /* Redução de espaço entre colunas */
+    /* Espaçamento */
     [data-testid="column"] {
         padding: 0 5px !important;
     }
@@ -105,7 +101,7 @@ st.markdown("""
         gap: 0.3rem !important;
     }
 
-    /* Métricas */
+    /* Métricas e botões */
     [data-testid="stMetric"] {
         background-color: #eaddd7 !important;
         padding: 15px !important;
@@ -113,7 +109,6 @@ st.markdown("""
         border: 2px solid #bc9e92 !important;
     }
 
-    /* Botões Gerais */
     button, [data-testid="baseButton-primary"] {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -123,8 +118,7 @@ st.markdown("""
         background-color: #a88a7e !important; 
     }
 
-    header { visibility: hidden; }
-    footer { visibility: hidden; }
+    header, footer { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -210,7 +204,6 @@ TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patent
 st.sidebar.markdown("<h2 style='text-align: center;'>Menu Studio</h2>", unsafe_allow_html=True)
 menu = st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"])
 
-# --- DASHBOARD ---
 if menu == "📊 Dashboard":
     st.header("📊 Stato Generale dello Studio")
     m1, m2, m3, m4 = st.columns(4)
@@ -227,7 +220,6 @@ if menu == "📊 Dashboard":
             df_cli = pd.DataFrame(st.session_state.clienti)
             st.bar_chart(df_cli['Regione'].value_counts())
 
-# --- ANAGRAFICA CLIENTI ---
 elif menu == "👥 Anagrafica Clienti":
     st.header("👥 Gestione Anagrafica e Documentale")
     t_aba1, t_aba2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
@@ -283,7 +275,6 @@ elif menu == "👥 Anagrafica Clienti":
         if st.session_state.clienti:
             st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
-# --- OUTRAS PÁGINAS ---
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
     
