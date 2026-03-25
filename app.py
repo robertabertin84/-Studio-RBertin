@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date
@@ -18,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS - Apenas correção do botão grande
+# CSS ATUALIZADO - Correções específicas solicitadas
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -35,28 +36,42 @@ st.markdown("""
         padding: 12px !important;
     }
     
-    /* Texto */
+    /* Texto geral */
     label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
         color: black !important; 
         font-weight: 700 !important;
     }
 
-    /* Inputs */
-    input, textarea, [data-baseweb="input"], .stDateInput div {
+    /* Inputs normais */
+    input, textarea, [data-baseweb="input"] {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Menus suspensos */
+    /* ==================== MENUS SUSPENSOS (Regione e Tipo Doc) ==================== */
     [data-baseweb="select"] > div,
-    div[role="listbox"], div[role="listbox"] ul, div[role="listbox"] li,
-    div[data-baseweb="menu"], [data-baseweb="popover"] {
+    div[role="listbox"], 
+    div[role="listbox"] ul, 
+    div[role="listbox"] li,
+    div[data-baseweb="menu"], 
+    [data-baseweb="popover"] {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
     div[role="listbox"] li:hover {
         background-color: #e8e6e4 !important;
+    }
+
+    /* ==================== CALENDÁRIO (Scadenza) - Corrigido ==================== */
+    .stDateInput > div > div {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+        border: 1px solid #bc9e92 !important;
+    }
+    .stDateInput input {
+        background-color: #f3f2f1 !important;
+        color: black !important;
     }
 
     /* Upload múltiplo */
@@ -76,7 +91,7 @@ st.markdown("""
         border: 1px solid #a88a7e !important;
     }
 
-    /* ==================== CORREÇÃO ESPECÍFICA DO BOTÃO GRANDE ==================== */
+    /* Botão grande REGISTRA CLIENTE */
     button[kind="primary"], 
     .stButton > button {
         background-color: #bc9e92 !important;
@@ -240,8 +255,8 @@ elif menu == "👥 Anagrafica Clienti":
                                           accept_multiple_files=True, 
                                           key="multi_upload")
 
-        st.subheader("📝 ANNOTAZIONI")
-        notas = st.text_area("Note e dettagli della pratica...", height=120)
+        st.subheader("ANNOTAZIONI CLIENTE")
+        notas = st.text_area("ANNOTAZIONI CLIENTE", height=120)
 
         if st.button("🚀 REGISTRA CLIENTE E SINCRONIZZA DRIVE"):
             if nome and cf:
