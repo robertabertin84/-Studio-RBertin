@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO (RESTAURO TOTAL E ELIMINAÇÃO DO PRETO)
+# 1. CONFIGURAZIONE E CSS AVANZATO
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -18,15 +18,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS para forçar a estética SRB e remover componentes pretos inúteis
+# CSS ATUALIZADO - Apenas as correções solicitadas
 st.markdown("""
     <style>
-    /* 1.1 Fundo Global e Sidebar */
+    /* Fundo Global */
     .stApp, [data-testid="stSidebar"], [data-testid="stSidebarContent"] { 
         background-color: #f4e7e1 !important; 
     }
 
-    /* 1.2 Barras de Título (Expanders) - BEGE SRB SEM PRETO */
+    /* Barras de Título (Expanders) */
     .st-emotion-cache-p6495m, .st-emotion-cache-1h9bt9w, [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -36,38 +36,43 @@ st.markdown("""
         font-size: 16px !important;
     }
     
-    /* 1.3 Forçar Texto e Rótulos em Preto Negrito */
+    /* Texto em Preto Negrito */
     label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
         color: black !important; 
         font-weight: 700 !important;
     }
 
-    /* 1.4 Inputs, Selectbox e DateInput: FUNDO BRANCO E BORDAS DEFINIDAS */
-    input, textarea, [data-baseweb="select"] > div, .stSelectbox div, [data-baseweb="popover"], [data-baseweb="input"], .stDateInput div {
+    /* Inputs e DateInput */
+    input, textarea, [data-baseweb="input"], .stDateInput div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* 1.5 REMOVER FUNDO PRETO DOS MENUS SUSPENSOS (CORREÇÃO CRÍTICA) */
-    div[role="listbox"] ul, div[role="listbox"] li, div[data-baseweb="menu"], [data-testid="stSelectbox"] div {
-        background-color: white !important;
-        color: black !important;
-    }
-    div[data-baseweb="popover"] { background-color: white !important; }
-    
-    /* ==================== CORREÇÕES QUE VOCÊ PEDIU ==================== */
-    
-    /* Fundo do menu suspenso da Região igual ao fundo da página */
+    /* ==================== CORREÇÃO DO MENU REGIONE ==================== */
+    /* Fundo do dropdown aberto */
+    div[role="listbox"], 
     div[role="listbox"] ul, 
-    div[role="listbox"] li, 
-    div[data-baseweb="menu"], 
+    div[role="listbox"] li,
+    div[data-baseweb="menu"],
     [data-baseweb="popover"] {
-        background-color: #f4e7e1 !important;
+        background-color: #f3f2f1 !important;
         color: black !important;
     }
 
-    /* 1.6 TRATAMENTO DO UPLOAD (APENAS BOTÃO BROWSE - LIMPO) */
+    /* Fundo do campo fechado do select (Regione) */
+    [data-baseweb="select"] > div {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+        border: 1px solid #bc9e92 !important;
+    }
+
+    /* Hover no menu */
+    div[role="listbox"] li:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    /* ==================== ELIMINAÇÃO TOTAL DA CAIXA PRETA DO UPLOAD ==================== */
     [data-testid="stFileUploader"] {
         background-color: transparent !important;
         border: none !important;
@@ -75,7 +80,7 @@ st.markdown("""
         margin-top: 10px !important;
     }
     [data-testid="stFileUploaderSection"] {
-        display: none !important; /* Mata a caixa preta gigante de drag & drop */
+        display: none !important; /* Remove a caixa preta gigante */
     }
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
@@ -86,7 +91,7 @@ st.markdown("""
         height: 42px !important;
     }
 
-    /* 1.7 REDUÇÃO DE GAP (FIM DO ESPAÇO VAZIO PRETO) */
+    /* Redução de espaço */
     [data-testid="column"] {
         padding: 0 5px !important;
     }
@@ -94,7 +99,7 @@ st.markdown("""
         gap: 0.3rem !important;
     }
 
-    /* 1.8 Estilização das Métricas Dashboard */
+    /* Métricas */
     [data-testid="stMetric"] {
         background-color: #eaddd7 !important;
         padding: 15px !important;
@@ -102,14 +107,15 @@ st.markdown("""
         border: 2px solid #bc9e92 !important;
     }
 
-    /* 1.9 Botões Gerais */
+    /* Botões Gerais */
     button, [data-testid="baseButton-primary"] {
         background-color: #bc9e92 !important;
         color: black !important;
         border: 2px solid #a88a7e !important;
-        transition: 0.2s;
     }
-    button:hover { background-color: #a88a7e !important; }
+    button:hover { 
+        background-color: #a88a7e !important; 
+    }
 
     header { visibility: hidden; }
     footer { visibility: hidden; }
@@ -138,7 +144,6 @@ def manage_drive_structure(nome_cliente, srb_code):
     if err: return None, err
     
     try:
-        # 2.1 Localiza ou cria a pasta raiz do Studio
         q = "name = 'GESTIONALE RBERTIN' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         res = service.files().list(q=q).execute()
         folders = res.get('files', [])
@@ -150,7 +155,6 @@ def manage_drive_structure(nome_cliente, srb_code):
         else:
             root_id = folders[0]['id']
             
-        # 2.2 Cria pasta específica do cliente
         folder_meta = {
             'name': f"{srb_code} - {nome_cliente}",
             'mimeType': 'application/vnd.google-apps.folder',
@@ -195,7 +199,7 @@ if not st.session_state.autenticato:
     st.stop()
 
 # ==============================================================================
-# 4. INTERFACE DO GESTIONALE (RESTAURAÇÃO DAS 420 LINHAS)
+# 4. INTERFACE DO GESTIONALE
 # ==============================================================================
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria"]
@@ -203,7 +207,7 @@ TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patent
 st.sidebar.markdown("<h2 style='text-align: center;'>Menu Studio</h2>", unsafe_allow_html=True)
 menu = st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"])
 
-# --- 4.1 DASHBOARD COMPLETA ---
+# --- DASHBOARD ---
 if menu == "📊 Dashboard":
     st.header("📊 Stato Generale dello Studio")
     m1, m2, m3, m4 = st.columns(4)
@@ -220,13 +224,12 @@ if menu == "📊 Dashboard":
             df_cli = pd.DataFrame(st.session_state.clienti)
             st.bar_chart(df_cli['Regione'].value_counts())
 
-# --- 4.2 ANAGRAFICA (RESTAURO TOTAL DOS CAMPOS) ---
+# --- ANAGRAFICA CLIENTI ---
 elif menu == "👥 Anagrafica Clienti":
     st.header("👥 Gestione Anagrafica e Documentale")
     t_aba1, t_aba2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
     
     with t_aba1:
-        # Seção Dados Pessoais
         with st.expander("📍 DATI PERSONALI", expanded=True):
             cp1, cp2 = st.columns(2)
             nome = cp1.text_input("Nome e Cognome")
@@ -234,7 +237,6 @@ elif menu == "👥 Anagrafica Clienti":
             tel = cp2.text_input("Telefono (WhatsApp)")
             email = cp2.text_input("Indirizzo Email")
             
-        # Seção Endereço (Restaurada sem espaços pretos)
         with st.expander("🏠 INDIRIZZO", expanded=True):
             ci1, ci2, ci3 = st.columns([2, 1, 1])
             rua = ci1.text_input("Via / Piazza e Civico")
@@ -242,12 +244,10 @@ elif menu == "👥 Anagrafica Clienti":
             cap = ci3.text_input("CAP")
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
-        # Seção Documentos (O coração do problema visual corrigido)
         with st.expander("📄 DOCUMENTI (Caricamento Singolo)", expanded=True):
             st.markdown("<p style='font-size: 13px;'>Seleziona il tipo e carica il file. Il sistema creerà automaticamente la cartella nel Drive.</p>", unsafe_allow_html=True)
             doc_list = []
             for i in range(1, 5):
-                # Colunas próximas para evitar o "vazio preto"
                 d1, d2, d3, d4 = st.columns([1.1, 1.1, 0.7, 1.1])
                 tipo = d1.selectbox(f"Tipo Doc {i}", TIPOS_DOC, key=f"t_doc_{i}")
                 num = d2.text_input(f"Numero Doc {i}", key=f"n_doc_{i}")
@@ -256,7 +256,6 @@ elif menu == "👥 Anagrafica Clienti":
                 if tipo and num:
                     doc_list.append({"tipo": tipo, "num": num, "scad": scad, "file": file})
 
-        # Notas e Salvamento
         st.subheader("📝 ANNOTAZIONI")
         notas = st.text_area("Note e dettagli della pratica...", height=120)
 
@@ -281,10 +280,10 @@ elif menu == "👥 Anagrafica Clienti":
         if st.session_state.clienti:
             st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
-# Práticas e Arquivo (Mantidos para integridade do sistema)
+# --- OUTRAS PÁGINAS ---
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
-    # Lógica de abertura...
+    
 elif menu == "🗄️ Archivio":
     st.header("🗄️ Archivio Documentale Drive")
     for c in st.session_state.clienti:
