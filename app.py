@@ -56,6 +56,17 @@ st.markdown("""
     }
     div[data-baseweb="popover"] { background-color: white !important; }
     
+    /* ==================== CORREÇÕES QUE VOCÊ PEDIU ==================== */
+    
+    /* Fundo do menu suspenso da Região igual ao fundo da página */
+    div[role="listbox"] ul, 
+    div[role="listbox"] li, 
+    div[data-baseweb="menu"], 
+    [data-baseweb="popover"] {
+        background-color: #f4e7e1 !important;
+        color: black !important;
+    }
+
     /* 1.6 TRATAMENTO DO UPLOAD (APENAS BOTÃO BROWSE - LIMPO) */
     [data-testid="stFileUploader"] {
         background-color: transparent !important;
@@ -278,5 +289,3 @@ elif menu == "🗄️ Archivio":
     st.header("🗄️ Archivio Documentale Drive")
     for c in st.session_state.clienti:
         st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri Cartella]({c['Link']})")
-
-        
