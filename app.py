@@ -25,7 +25,7 @@ st.markdown("""
         background-color: #f4e7e1 !important; 
     }
 
-    /* Expanders */
+    /* Barras de Título (Expanders) */
     [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -41,21 +41,79 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* Inputs */
+    /* Inputs e DateInput */
     input, textarea, [data-baseweb="input"], .stDateInput div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Menus Suspensos e Calendário */
-    div[data-baseweb="select"] > div, .stSelectbox > div > div {
+    /* ==================== CORREZIONE MENU A TENDINA ==================== */
+    div[data-baseweb="select"] > div,
+    .stSelectbox > div > div {
         background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Botões */
+    div[role="listbox"],
+    div[role="listbox"] ul,
+    div[role="listbox"] li,
+    div[data-baseweb="menu"],
+    [data-baseweb="popover"],
+    ul[data-testid="stSelectboxVirtualDropdown"] {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+    }
+
+    div[role="listbox"] li:hover,
+    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    /* ==================== CORREZIONE CALENDARIO SCADENZA ==================== */
+    .stDateInput > div > div,
+    .stDateInput input {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+        border: 1px solid #bc9e92 !important;
+    }
+
+    div[data-baseweb="calendar"],
+    div[data-baseweb="calendar"] > div,
+    div[data-baseweb="calendar"] button,
+    div[data-baseweb="calendar"] span,
+    div[data-baseweb="calendar"] td,
+    div[data-baseweb="calendar"] th {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+    }
+
+    div[data-baseweb="calendar"] button:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    div[data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: #bc9e92 !important;
+        color: black !important;
+    }
+
+    /* Upload */
+    [data-testid="stFileUploader"] section {
+        background-color: transparent !important;
+        border: 2px dashed #bc9e92 !important;
+        border-radius: 8px !important;
+    }
+
+    /* Métriche */
+    [data-testid="stMetric"] {
+        background-color: #eaddd7 !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        border: 2px solid #bc9e92 !important;
+    }
+
+    /* Bottoni */
     button, [data-testid="baseButton-primary"] {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -69,7 +127,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE (COM PROTEÇÃO DE CHAVE)
+# 2. SISTEMA DE BACK-END: GOOGLE DRIVE
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -77,19 +135,11 @@ def init_google_drive():
     try:
         if "gcp_service_account" not in st.secrets:
             return None, "Secret gcp_service_account não encontrada."
-        
-        # --- PROTEÇÃO REFORÇADA ---
-        # Converte os segredos em um dicionário mutável
-        info = dict(st.secrets["gcp_service_account"])
-        
-        # Remove eventuais caracteres de escape \n que quebram o arquivo PEM
-        if "private_key" in info:
-            info["private_key"] = info["private_key"].replace("\\n", "\n")
-        
+        info = st.secrets["gcp_service_account"]
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
         return build('drive', 'v3', credentials=creds), None
     except Exception as e:
-        return None, f"Erro de Autenticação: {str(e)}"
+        return None, str(e)
 
 def manage_drive_structure(nome_cliente, srb_code):
     service, err = init_google_drive()
@@ -98,21 +148,10 @@ def manage_drive_structure(nome_cliente, srb_code):
         q = "name = 'GESTIONALE RBERTIN' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         res = service.files().list(q=q).execute()
         folders = res.get('files', [])
-        
-        if folders:
-            root_id = folders[0]['id']
-        else:
-            root_meta = {'name': 'GESTIONALE RBERTIN', 'mimeType': 'application/vnd.google-apps.folder'}
-            root_id = service.files().create(body=root_meta, fields='id').execute()['id']
-            
-        folder_meta = {
-            'name': f"{srb_code} - {nome_cliente}",
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [root_id]
-        }
+        root_id = folders[0]['id'] if folders else service.files().create(body={'name': 'GESTIONALE RBERTIN', 'mimeType': 'application/vnd.google-apps.folder'}, fields='id').execute()['id']
+        folder_meta = {'name': f"{srb_code} - {nome_cliente}", 'mimeType': 'application/vnd.google-apps.folder', 'parents': [root_id]}
         return service.files().create(body=folder_meta, fields='id, webViewLink').execute(), None
-    except Exception as e:
-        return None, str(e)
+    except Exception as e: return None, str(e)
 
 def upload_to_client_folder(file_obj, folder_id, new_filename):
     service, _ = init_google_drive()
@@ -122,11 +161,10 @@ def upload_to_client_folder(file_obj, folder_id, new_filename):
         media = MediaIoBaseUpload(io.BytesIO(file_obj.read()), mimetype=file_obj.type, resumable=True)
         service.files().create(body=meta, media_body=media).execute()
         return True
-    except:
-        return False
+    except: return False
 
 # ==============================================================================
-# 3. CONTROLE DE ESTADO E LOGIN
+# 3. CONTROLE DE ESTATO E LOGIN
 # ==============================================================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if 'clienti' not in st.session_state: st.session_state.clienti = []
@@ -143,8 +181,7 @@ if not st.session_state.autenticato:
                 if pwd == "RB2026": 
                     st.session_state.autenticato = True
                     st.rerun()
-                else:
-                    st.error("Accesso Negato.")
+                else: st.error("Accesso Negato.")
     st.stop()
 
 # ==============================================================================
@@ -193,11 +230,11 @@ elif menu == "👥 Anagrafica Clienti":
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
         with st.expander("📄 DOCUMENTI", expanded=True):
-            st.markdown("<p style='font-size: 13px;'>Inserisci numeri e scadenze. Carica i file nel campo em baixo.</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 13px;'>Inserisci numeri e scadenze. Carica i file nel campo in basso.</p>", unsafe_allow_html=True)
             
             DOCS_FIXOS = ["Carta d'Identità", "Permesso di Soggiorno", "Patente Italiana", "Tessera Sanitaria", "Passaporto Brasiliano"]
-            doc_entries = []
             
+            doc_entries = []
             h1, h2, h3 = st.columns([0.8, 1.2, 1.0])
             h1.markdown("**Documento**")
             h2.markdown("**Numero**")
@@ -223,7 +260,6 @@ elif menu == "👥 Anagrafica Clienti":
                 with st.spinner("Sincronizzazione Drive..."):
                     folder_obj, error = manage_drive_structure(nome, srb_code)
                     if folder_obj:
-                        # Upload dos arquivos renomeados
                         for idx, f in enumerate(uploaded_files):
                             if idx < len(doc_entries):
                                 d = doc_entries[idx]
@@ -231,18 +267,10 @@ elif menu == "👥 Anagrafica Clienti":
                                 new_name = f"{d['tipo']}_{d['num']}{ext}"
                                 upload_to_client_folder(f, folder_obj['id'], new_name)
                         
-                        st.session_state.clienti.append({
-                            "ID": srb_code, 
-                            "Nome": nome, 
-                            "CF": cf, 
-                            "Regione": regiao, 
-                            "Link": folder_obj['webViewLink']
-                        })
-                        st.success(f"✅ Cliente {srb_code} salvato con successo!")
-                    else:
-                        st.error(f"Errore critico Drive: {error}")
-            else:
-                st.error("Per favore, inserisci almeno Nome e Codice Fiscale!")
+                        st.session_state.clienti.append({"ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao, "Link": folder_obj['webViewLink']})
+                        st.success(f"✅ Cliente {srb_code} salvato!")
+                    else: st.error(f"Errore: {error}")
+            else: st.error("Inserire Nome e CF!")
 
     with t_aba2:
         if st.session_state.clienti:
@@ -252,9 +280,6 @@ elif menu == "👥 Anagrafica Clienti":
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
 elif menu == "🗄️ Archivio":
-    st.header("🗄️ Archivio Digitale")
-    if not st.session_state.clienti:
-        st.info("Nessun cliente registrato.")
-    else:
-        for c in st.session_state.clienti:
-            st.markdown(f"📁 **{c['ID']}** - {c['Nome']} - [Apri Cartella Google Drive]({c['Link']})")
+    st.header("🗄️ Archivio")
+    for c in st.session_state.clienti:
+        st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri Cartella]({c['Link']})")
