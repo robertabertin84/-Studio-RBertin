@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO (DESIGN ORIGINAL RBERTIN)
+# 1. CONFIGURAZIONE E CSS AVANZATO
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -25,7 +25,7 @@ st.markdown("""
         background-color: #f4e7e1 !important; 
     }
 
-    /* Barras de Título (Expanders) */
+    /* Expanders */
     [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -41,37 +41,56 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* Inputs e DateInput */
-    input, textarea, [data-baseweb="input"], .stDateInput div {
+    /* Inputs normais */
+    input, textarea, [data-baseweb="input"] {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== CORREZIONE MENUS A TENDINA (Regione e altri) ==================== */
-    /* Campo chiuso del select */
+    /* Menus Suspensos (Regione etc.) */
     div[data-baseweb="select"] > div,
-    .stSelectbox > div > div {
+    .stSelectbox > div > div,
+    div[role="listbox"],
+    div[role="listbox"] ul,
+    div[role="listbox"] li,
+    div[data-baseweb="menu"],
+    [data-baseweb="popover"] {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+    }
+    div[role="listbox"] li:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    /* ==================== CORREÇÃO FORTE DO CALENDÁRIO (Scadenza) ==================== */
+    /* Campo da data */
+    .stDateInput > div > div,
+    .stDateInput input {
         background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Menu dropdown aperto (lista che scende) */
-    div[role="listbox"],
-    div[role="listbox"] ul,
-    div[role="listbox"] li,
-    div[data-baseweb="menu"],
-    [data-baseweb="popover"],
-    ul[data-testid="stSelectboxVirtualDropdown"] {
+    /* Calendário popup inteiro */
+    div[data-baseweb="calendar"],
+    div[data-baseweb="calendar"] > div,
+    div[data-baseweb="calendar"] div,
+    div[data-baseweb="calendar"] button,
+    div[data-baseweb="calendar"] span,
+    div[data-baseweb="calendar"] td,
+    div[data-baseweb="calendar"] th {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
 
-    /* Hover sugli elementi del menu */
-    div[role="listbox"] li:hover,
-    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+    /* Hover e dia selecionado no calendário */
+    div[data-baseweb="calendar"] button:hover {
         background-color: #e8e6e4 !important;
+    }
+    div[data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: #bc9e92 !important;
+        color: black !important;
     }
 
     /* Upload */
@@ -81,15 +100,7 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* Métriche */
-    [data-testid="stMetric"] {
-        background-color: #eaddd7 !important;
-        padding: 15px !important;
-        border-radius: 10px !important;
-        border: 2px solid #bc9e92 !important;
-    }
-
-    /* Bottoni */
+    /* Botões */
     button, [data-testid="baseButton-primary"] {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -103,7 +114,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE
+# 2. SISTEMA DE BACK-END: GOOGLE DRIVE  (mantido igual)
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -161,7 +172,7 @@ if not st.session_state.autenticato:
     st.stop()
 
 # ==============================================================================
-# 4. INTERFACE DO GESTIONALE
+# 4. INTERFACE DO GESTIONALE  (mantido igual ao teu último código)
 # ==============================================================================
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 
