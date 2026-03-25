@@ -3,206 +3,181 @@ import pandas as pd
 from datetime import datetime, date
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
+import plotly.express as px
 
 # ==========================================
-# 1. CONFIGURAZIONE APPLICAZIONE
+# 1. CONFIGURAZIONE E ESTILO (COR #bc9e92)
 # ==========================================
 st.set_page_config(page_title="Studio RBertin - Gestionale", layout="wide")
 
-# --- CONNESSIONE GOOGLE DRIVE ---
-def get_drive_service():
+st.markdown(f"""
+    <style>
+    .stApp {{
+        background-color: #bc9e92;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- CONEXÃO SERVIÇOS GOOGLE ---
+def get_google_service(name, version, scopes):
     try:
         info = st.secrets["gcp_service_account"]
-        creds = Credentials.from_service_account_info(
-            info, 
-            scopes=["https://www.googleapis.com/auth/drive"]
-        )
-        return build('drive', 'v3', credentials=creds)
+        creds = Credentials.from_service_account_info(info, scopes=scopes)
+        return build(name, version, credentials=creds)
     except Exception as e:
-        st.error(f"Errore di configurazione Drive: {e}")
+        st.error(f"Errore Google {name}: {e}")
         return None
 
-def crea_cartella_cliente_drive(nome_cliente):
-    service = get_drive_service()
-    if not service:
-        return None
-    try:
-        query = "name = 'GESTIONALE RBERTIN' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-        results = service.files().list(q=query, fields="files(id)").execute()
-        items = results.get('files', [])
-        if not items:
-            st.error("⚠️ Cartella 'GESTIONALE RBERTIN' non trovata su Drive!")
-            return None
+# ==========================================
+# 2. FUNÇÕES CORE (DRIVE, CONTATOS, REGISTRO)
+# ==========================================
+
+def criar_contato_google(nome, tel, email):
+    # Nota: Richiede abilitazione Google People API nel Cloud Console
+    service = get_google_service('people', 'v1', ["https://www.googleapis.com/auth/contacts"])
+    if service:
+        try:
+            service.people().createContact(body={
+                "names": [{"givenName": nome}],
+                "phoneNumbers": [{"value": tel}],
+                "emailAddresses": [{"value": email}]
+            }).execute()
+        except: pass
+
+def cria_cartella_cliente_drive(nome_completo, srb_code):
+    service = get_google_service('drive', 'v3', ["https://www.googleapis.com/auth/drive"])
+    if not service: return None
+    
+    query = "name = 'GESTIONALE RBERTIN' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    results = service.files().list(q=query, fields="files(id)").execute()
+    items = results.get('files', [])
+    
+    if items:
         parent_id = items[0]['id']
-        file_metadata = {
-            'name': nome_cliente,
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [parent_id]
-        }
-        cartella = service.files().create(body=file_metadata, fields='id').execute()
-        return cartella.get('id')
-    except Exception as e:
-        st.error(f"Errore creazione cartella: {e}")
-        return None
+        nome_pasta = f"{srb_code} - {nome_completo}"
+        file_metadata = {'name': nome_pasta, 'mimeType': 'application/vnd.google-apps.folder', 'parents': [parent_id]}
+        folder = service.files().create(body=file_metadata, fields='id, webViewLink').execute()
+        return folder
+    return None
 
 # ==========================================
-# 2. SISTEMA DI AUTENTICAZIONE
+# 3. LOGIN E DATABASE
 # ==========================================
-if 'autenticato' not in st.session_state:
-    st.session_state.autenticato = False
-
+if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if not st.session_state.autenticato:
     st.title("🔐 Accesso Studio RBertin")
-    col_login, _ = st.columns([1, 2])
-    with col_login:
-        password = st.text_input("Inserisci Password Studio:", type="password")
-        if st.button("Accedi al Sistema"):
-            if password == "RB2026":
-                st.session_state.autenticato = True
-                st.rerun()
-            else:
-                st.error("Password errata.")
+    pwd = st.text_input("Password:", type="password")
+    if st.button("Entra"):
+        if pwd == "RB2026": 
+            st.session_state.autenticato = True
+            st.rerun()
     st.stop()
 
-# ==========================================
-# 3. DATABASE E UTILS
-# ==========================================
-if 'clienti' not in st.session_state:
-    st.session_state.clienti = []
-if 'pratiche' not in st.session_state:
-    st.session_state.pratiche = []
+if 'clienti' not in st.session_state: st.session_state.clienti = []
+if 'pratiche' not in st.session_state: st.session_state.pratiche = []
 
-def f_data(dt):
-    return dt.strftime("%d/%m/%Y") if dt else ""
-
-def monitor_scadenze():
-    oggi = date.today()
-    avvisi = []
-    for c in st.session_state.clienti:
-        if c.get("Attivo", True):
-            scadenze = {"C.I.": "Scad_CI", "Passaporto": "Scad_Pass", "Permesso": "Scad_Perm", "Patente": "Scad_Pat"}
-            for label, key in scadenze.items():
-                scad = c.get(key)
-                if scad:
-                    giorni = (scad - oggi).days
-                    if 0 <= giorni <= 30:
-                        avvisi.append(f"⚠️ {c['Nome']}: {label} in scadenza il {f_data(scad)}")
-                    elif giorni < 0:
-                        avvisi.append(f"🚨 {c['Nome']}: {label} SCADUTO il {f_data(scad)}!")
-    return avvisi
+LISTA_REGIONI = ["Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 
 # ==========================================
-# 4. MENU LATERALE
+# 4. DASHBOARD COM MAPA
 # ==========================================
 st.sidebar.title("🏛️ Studio RBertin")
-st.sidebar.write("---")
-menu = st.sidebar.radio("NAVIGAZIONE:", ["Dashboard", "Anagrafica Clienti", "Nuova Pratica", "Archivio"])
+menu = st.sidebar.radio("MENU", ["Dashboard", "Anagrafica Clienti", "Nuova Pratica", "Archivio"])
 
-# ------------------------------------------
-# SEZIONE 1: DASHBOARD (AGGIORNATA)
-# ------------------------------------------
 if menu == "Dashboard":
-    st.header("📊 Riepilogo Statistiche Studio")
+    st.header("📊 Dashboard Studio RBertin")
     
-    # Calcolo dei numeri richiesti
-    tot_clienti = len(st.session_state.clienti)
-    tot_pratiche = len(st.session_state.pratiche)
-    pratiche_aperte = sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta")
-    pratiche_chiuse = sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Chiusa")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Clienti", len(st.session_state.clienti))
+    c2.metric("Pratiche Totali", len(st.session_state.pratiche))
+    c3.metric("Aperte", sum(1 for p in st.session_state.pratiche if p.get('Stato') == "Aperta"))
+    c4.metric("Chiuse", sum(1 for p in st.session_state.pratiche if p.get('Stato') == "Chiusa"))
 
-    # Visualizzazione Metriche
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("👥 Totale Clienti", tot_clienti)
-    m2.metric("📂 Totale Pratiche", tot_pratiche)
-    m3.metric("🔓 Pratiche Aperte", pratiche_aperte, delta_color="normal")
-    m4.metric("🔒 Pratiche Chiuse", pratiche_chiuse)
-
-    st.write("---")
-    st.subheader("🔔 Avvisi Scadenze Documenti")
-    notifiche = monitor_scadenze()
-    if notifiche:
-        for n in notifiche: st.warning(n)
-    else:
-        st.success("✅ Nessun documento in scadenza nei prossimi 30 giorni.")
-
-# ------------------------------------------
-# SEZIONE 2: ANAGRAFICA CLIENTI
-# ------------------------------------------
-elif menu == "Anagrafica Clienti":
-    st.header("👥 Gestione Anagrafica e Drive")
-    with st.expander("➕ AGGIUNGI NUOVO CLIENTE"):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            nome = st.text_input("Nome e Cognome")
-            cf = st.text_input("Codice Fiscale")
-            nascita_d = st.date_input("Data Nascita", value=date(1985,1,1), format="DD/MM/YYYY")
-            nascita_l = st.text_input("Luogo di Nascita")
-            residenza = st.text_input("Indirizzo Residenza")
-            attivo = st.toggle("Cliente Attivo", value=True)
-        with col2:
-            tel = st.text_input("Telefono")
-            mail = st.text_input("Email")
-            pec = st.text_input("PEC")
-            note = st.text_area("Note e Appunti")
-        with col3:
-            s_ci = st.date_input("Scadenza C.I.", format="DD/MM/YYYY")
-            s_pass = st.date_input("Scadenza Passaporto", format="DD/MM/YYYY")
-            s_perm = st.date_input("Scadenza Permesso", format="DD/MM/YYYY")
-            s_pat = st.date_input("Scadenza Patente", format="DD/MM/YYYY")
-            st.file_uploader("Carica file su Drive", accept_multiple_files=True)
-
-        if st.button("🚀 SALVA CLIENTE E CREA CARTELLA"):
-            if nome and cf:
-                id_drive = crea_cartella_cliente_drive(nome)
-                st.session_state.clienti.append({
-                    "Nome": nome, "CF": cf, "Nascita": nascita_d, "Luogo": nascita_l,
-                    "Residenza": residenza, "Attivo": attivo, "Telefono": tel,
-                    "Email": mail, "PEC": pec, "Note": note,
-                    "Scad_CI": s_ci, "Scad_Pass": s_pass, "Scad_Perm": s_perm, "Scad_Pat": s_pat,
-                    "Drive_ID": id_drive
-                })
-                st.success(f"✅ Cliente {nome} creato con successo!")
-            else: st.error("Nome e CF sono obbligatori.")
-
+    st.subheader("📍 Distribuzione Geografica")
     if st.session_state.clienti:
-        st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
-
-# ------------------------------------------
-# SEZIONE 3: NUOVA PRATICA
-# ------------------------------------------
-elif menu == "Nuova Pratica":
-    st.header("📂 Apertura Nuovo Fascicolo")
-    if not st.session_state.clienti:
-        st.warning("Aggiungi prima un cliente in anagrafica.")
+        df_clienti = pd.DataFrame(st.session_state.clienti)
+        counts = df_clienti['Regione'].value_counts().reset_index()
+        counts.columns = ['Regione', 'Clienti']
+        fig = px.bar(counts, x='Regione', y='Clienti', color_discrete_sequence=['#4a3b35'])
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        lista_nomi = [cl["Nome"] for cl in st.session_state.clienti if cl["Attivo"]]
-        cliente_scelto = st.selectbox("Seleziona il Cliente", lista_nomi)
-        
-        c_p1, c_p2 = st.columns(2)
-        with c_p1:
-            cat = st.selectbox("Categoria", ["FISCO", "CONSOLARI", "PA", "VARIE"])
-            desc = st.text_area("Oggetto/Note Pratica")
-        with c_p2:
-            stato = st.selectbox("Stato Iniziale", ["Aperta", "Chiusa"])
-            st.write("Checklist:")
-            st.checkbox("Documento Identità")
-            st.checkbox("Mandato firmato")
-            
-        if st.button("Registra Pratica"):
-            st.session_state.pratiche.append({
-                "Data": f_data(date.today()), 
-                "Cliente": cliente_scelto, 
-                "Tipo": cat, 
-                "Stato": stato,
-                "Note": desc
-            })
-            st.success(f"Pratica registrata come '{stato}'!")
+        st.info("Inizia a registrare clienti per vedere la mappa.")
 
-# ------------------------------------------
-# SEZIONE 4: ARCHIVIO
-# ------------------------------------------
+# ==========================================
+# 5. ANAGRAFICA (SRB CODE, ENDEREÇO, DOCS)
+# ==========================================
+elif menu == "Anagrafica Clienti":
+    st.header("👥 Gestione Clienti")
+    
+    tab_reg, tab_lista = st.tabs(["➕ Registra", "📑 Lista Clienti (SRB Order)"])
+    
+    with tab_reg:
+        with st.expander("Dati Nuovo Cliente", expanded=True):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                nome = st.text_input("Nome e Cognome")
+                cf = st.text_input("Codice Fiscale")
+                st.markdown("**Indirizzo**")
+                via = st.text_input("Via/Piazza")
+                citta = st.text_input("Città")
+                cap = st.text_input("CAP")
+                regione = st.selectbox("Regione", LISTA_REGIONI)
+            
+            with col2:
+                tel = st.text_input("Telefono")
+                email = st.text_input("Email")
+                st.markdown("**Documento**")
+                tipo_doc = st.selectbox("Tipo Doc", ["C.I.", "Passaporto", "Permesso", "Patente"])
+                num_doc = st.text_input("Numero Documento")
+                scad_doc = st.date_input("Scadenza Documento")
+
+            if st.button("🚀 SALVA E GENERA SRB"):
+                if nome and cf:
+                    srb_num = len(st.session_state.clienti) + 1
+                    srb_code = f"SRB{srb_num:04d}"
+                    
+                    folder = cria_cartella_cliente_drive(nome, srb_code)
+                    criar_contato_google(nome, tel, email)
+                    
+                    st.session_state.clienti.append({
+                        "ID": srb_code, "Nome": nome, "CF": cf, "Citta": citta, "Regione": regione,
+                        "Tel": tel, "Email": email, "Doc": tipo_doc, "Doc_Num": num_doc, 
+                        "Scadenza": scad_doc, "Drive_URL": folder['webViewLink'] if folder else "#"
+                    })
+                    st.success(f"Registrato con successo! Codice: {srb_code}")
+                else: st.error("Inserisci Nome e Codice Fiscale!")
+
+    with tab_lista:
+        if st.session_state.clienti:
+            df = pd.DataFrame(st.session_state.clienti).sort_values("ID")
+            st.dataframe(df[["ID", "Nome", "Regione", "Email", "Tel"]], use_container_width=True)
+            
+            sel_srb = st.selectbox("Seleziona Cliente per dettagli/Drive", df["ID"])
+            curr = next(item for item in st.session_state.clienti if item["ID"] == sel_srb)
+            
+            st.info(f"📁 [CLICCA QUI PER APRIRE LA CARTELLA DRIVE DI {curr['Nome']}]({curr['Drive_URL']})")
+
+# ==========================================
+# 6. NUOVA PRATICA E ARCHIVIO
+# ==========================================
+elif menu == "Nuova Pratica":
+    st.header("📂 Nuova Pratica")
+    if not st.session_state.clienti: st.warning("Aggiungi un cliente prima.")
+    else:
+        nome_sel = st.selectbox("Cliente", [c["Nome"] for c in st.session_state.clienti])
+        cat = st.selectbox("Tipo", ["FISCO", "CONSOLARI", "PA", "ALTRO"])
+        stato = st.radio("Stato", ["Aperta", "Chiusa"], horizontal=True)
+        if st.button("Salva Pratica"):
+            st.session_state.pratiche.append({
+                "Data": date.today().strftime("%d/%m/%Y"), 
+                "Cliente": nome_sel, 
+                "Tipo": cat, 
+                "Stato": stato
+            })
+            st.success("Pratica registrata!")
+
 elif menu == "Archivio":
-    st.header("🗄️ Storico Pratiche")
-    if st.session_state.pratiche:
+    st.header("🗄️ Archivio Storico")
+    if st.session_state.pratiche: 
         st.dataframe(pd.DataFrame(st.session_state.pratiche), use_container_width=True)
     else: st.info("L'archivio è vuoto.")
