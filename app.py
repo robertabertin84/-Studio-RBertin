@@ -48,11 +48,54 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Menus Suspensos */
-    div[data-baseweb="select"] > div, .stSelectbox > div > div {
+    /* ==================== CORREZIONE MENU A TENDINA ==================== */
+    div[data-baseweb="select"] > div,
+    .stSelectbox > div > div {
         background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
+    }
+
+    div[role="listbox"],
+    div[role="listbox"] ul,
+    div[role="listbox"] li,
+    div[data-baseweb="menu"],
+    [data-baseweb="popover"],
+    ul[data-testid="stSelectboxVirtualDropdown"] {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+    }
+
+    div[role="listbox"] li:hover,
+    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    /* ==================== CORREZIONE CALENDARIO SCADENZA ==================== */
+    .stDateInput > div > div,
+    .stDateInput input {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+        border: 1px solid #bc9e92 !important;
+    }
+
+    div[data-baseweb="calendar"],
+    div[data-baseweb="calendar"] > div,
+    div[data-baseweb="calendar"] button,
+    div[data-baseweb="calendar"] span,
+    div[data-baseweb="calendar"] td,
+    div[data-baseweb="calendar"] th {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+    }
+
+    div[data-baseweb="calendar"] button:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    div[data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: #bc9e92 !important;
+        color: black !important;
     }
 
     /* Upload */
@@ -187,7 +230,7 @@ elif menu == "👥 Anagrafica Clienti":
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
         with st.expander("📄 DOCUMENTI", expanded=True):
-            st.markdown("<p style='font-size: 13px;'>Inserisci numeri e scadenze. Carica i file nel campo in basso (opzionale).</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 13px;'>Inserisci numeri e scadenze. Carica i file nel campo in basso.</p>", unsafe_allow_html=True)
             
             DOCS_FIXOS = ["Carta d'Identità", "Permesso di Soggiorno", "Patente Italiana", "Tessera Sanitaria", "Passaporto Brasiliano"]
             
@@ -203,11 +246,10 @@ elif menu == "👥 Anagrafica Clienti":
                 n_val = c2.text_input("Numero", key=f"n_{d_name}", label_visibility="collapsed", placeholder="Numero")
                 s_val = c3.date_input("Scadenza", value=date.today(), key=f"s_{d_name}", label_visibility="collapsed", format="DD/MM/YYYY")
                 if n_val:
-                    doc_entries.append({"tipo": d_name.replace(" ", ""), "num": n_val, "scad": s_val})
+                    doc_entries.append({"tipo": d_name, "num": n_val, "scad": s_val})
 
-        st.subheader("📤 Upload Documenti (Opzionale)")
-        st.info("Puoi caricare i file ora oppure in un secondo momento.")
-        uploaded_files = st.file_uploader("Seleziona tutti i file dei documenti sopra (opzionale)", accept_multiple_files=True)
+        st.subheader("📤 Upload Documenti (Lotto)")
+        uploaded_files = st.file_uploader("Seleziona tutti i file dei documentos acima", accept_multiple_files=True)
 
         st.subheader("📝 ANNOTAZIONI")
         notas = st.text_area("Note e dettagli...", height=100)
@@ -218,21 +260,17 @@ elif menu == "👥 Anagrafica Clienti":
                 with st.spinner("Sincronizzazione Drive..."):
                     folder_obj, error = manage_drive_structure(nome, srb_code)
                     if folder_obj:
-                        # Carica solo se sono stati selezionati file
-                        if uploaded_files:
-                            for idx, f in enumerate(uploaded_files):
-                                if idx < len(doc_entries):
-                                    d = doc_entries[idx]
-                                    ext = os.path.splitext(f.name)[1] or ".pdf"
-                                    new_name = f"{d['tipo']}_{d['num']}{ext}"   # <-- Nome con numero del documento
-                                    upload_to_client_folder(f, folder_obj['id'], new_name)
+                        for idx, f in enumerate(uploaded_files):
+                            if idx < len(doc_entries):
+                                d = doc_entries[idx]
+                                ext = os.path.splitext(f.name)[1]
+                                new_name = f"{d['tipo']}_{d['num']}{ext}"
+                                upload_to_client_folder(f, folder_obj['id'], new_name)
                         
                         st.session_state.clienti.append({"ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao, "Link": folder_obj['webViewLink']})
                         st.success(f"✅ Cliente {srb_code} salvato!")
-                    else: 
-                        st.error(f"Errore: {error}")
-            else: 
-                st.error("Inserire Nome e CF!")
+                    else: st.error(f"Errore: {error}")
+            else: st.error("Inserire Nome e CF!")
 
     with t_aba2:
         if st.session_state.clienti:
