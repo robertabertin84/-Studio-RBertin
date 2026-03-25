@@ -5,59 +5,57 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 # ==========================================
-# 1. CONFIGURAZIONE ESTETICA (RESTAURO TOTAL)
+# 1. CSS DE FORÇA TOTAL (BANIMENTO DO PRETO)
 # ==========================================
 st.set_page_config(page_title="Studio R Bertin", layout="wide")
 
 st.markdown("""
     <style>
-    /* Fundo Creme Global */
+    /* FUNDO GLOBAL */
     .stApp, [data-testid="stSidebar"], [data-testid="stSidebarContent"] { 
         background-color: #f4e7e1 !important; 
     }
 
-    /* Texto Preto em tudo */
-    label, p, h1, h2, h3, h4, span, li, div, .stMarkdown { 
+    /* TEXTOS SEMPRE PRETOS */
+    label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
         color: black !important; 
         font-weight: 600 !important;
     }
 
-    /* Centralização do Login */
-    [data-testid="stForm"] {
-        max-width: 450px;
-        margin-left: auto;
-        margin-right: auto;
-        padding: 40px;
-        background-color: #f4e7e1 !important; 
-        border-radius: 15px;
-        border: 2px solid #bc9e92 !important;
-    }
-
-    /* BOTÕES: Forçar Bege #bc9e92 e remover qualquer PRETO */
-    button, [data-testid="baseButton-primary"], [data-testid="baseButton-secondary"], .stButton>button {
-        background-color: #bc9e92 !important;
-        color: black !important;
-        border: 1px solid #a88a7e !important;
-        font-weight: bold !important;
-    }
-    
-    /* OLHINHO DA SENHA: Forçar Bege */
-    button[aria-label="Show password"] {
-        background-color: #bc9e92 !important;
-        color: black !important;
-    }
-    button[aria-label="Show password"] svg {
-        fill: black !important;
-    }
-
-    /* Input e Selectbox: Fundo Branco para visibilidade */
-    input, .stSelectbox div[data-baseweb="select"] {
+    /* ELIMINAR FUNDOS PRETOS EM INPUTS E SELECTBOX */
+    input, textarea, [data-baseweb="select"] > div, .stSelectbox div, [data-baseweb="input"] {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Sidebar Menu */
+    /* CORRIGIR TEXTO DENTRO DOS SELECTS E DATAS */
+    div[data-testid="stMarkdownContainer"] p, .stSelectbox p, div[role="listbox"] div {
+        color: black !important;
+    }
+    
+    /* BOTÕES E OLHINHO (BEGE #bc9e92) */
+    button, [data-testid="baseButton-primary"], .stButton>button, button[aria-label="Show password"] {
+        background-color: #bc9e92 !important;
+        color: black !important;
+        border: 2px solid #a88a7e !important;
+        font-weight: bold !important;
+    }
+    
+    /* ÍCONE DO OLHINHO */
+    button[aria-label="Show password"] svg { fill: black !important; }
+
+    /* CARD DE LOGIN CENTRALIZADO */
+    [data-testid="stForm"] {
+        max-width: 450px;
+        margin: auto;
+        padding: 40px;
+        background-color: #f4e7e1 !important; 
+        border: 2px solid #bc9e92 !important;
+        border-radius: 15px;
+    }
+
+    /* SIDEBAR */
     [data-testid="stSidebarNavItems"] li {
         background-color: #bc9e92 !important;
         margin-bottom: 8px;
@@ -69,7 +67,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNZIONI GOOGLE SERVICES ---
+# ==========================================
+# 2. FUNÇÕES GOOGLE (RESTALROU)
+# ==========================================
 def get_google_service(name, version, scopes):
     try:
         info = st.secrets["gcp_service_account"]
@@ -89,8 +89,15 @@ def cria_cartella_cliente_drive(nome, srb_code):
         return service.files().create(body=meta, fields='id, webViewLink').execute()
     return None
 
+def upload_to_drive(file, folder_id):
+    service = get_google_service('drive', 'v3', ["https://www.googleapis.com/auth/drive"])
+    if not service or not folder_id: return None
+    file_metadata = {'name': file.name, 'parents': [folder_id]}
+    media = service.files().create(body=file_metadata, media_body=file, fields='id').execute()
+    return media.get('id')
+
 # ==========================================
-# 2. LOGIN CENTRALIZADO
+# 3. LOGIN
 # ==========================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 
@@ -107,69 +114,66 @@ if not st.session_state.autenticato:
     st.stop()
 
 # ==========================================
-# 3. GESTIONALE (RESTAURADO)
+# 4. GESTIONALE COMPLETO
 # ==========================================
 if 'clienti' not in st.session_state: st.session_state.clienti = []
 if 'pratiche' not in st.session_state: st.session_state.pratiche = []
 
+LISTA_REGIONI = ["Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
+TIPOS_DOC = ["C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria"]
+
 st.sidebar.markdown("<h2 style='text-align: center;'>⚖️ Studio R Bertin</h2>", unsafe_allow_html=True)
 menu = st.sidebar.radio("NAVIGAZIONE", ["Dashboard", "Anagrafica Clienti", "Nuova Pratica", "Archivio"])
 
-if menu == "Dashboard":
-    st.header("📊 Estatísticas do Studio")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("👥 Clienti", len(st.session_state.clienti))
-    c2.metric("📂 Pratiche", len(st.session_state.pratiche))
-    c3.metric("🔓 Aperte", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta"))
-
-elif menu == "Anagrafica Clienti":
+if menu == "Anagrafica Clienti":
     st.header("👥 Gestione Anagrafica")
     t1, t2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
     
     with t1:
+        # --- DATI PERSONALI ---
         with st.expander("📍 DATI PERSONALI", expanded=True):
-            col1, col2 = st.columns(2)
-            nome = col1.text_input("Nome e Cognome")
-            cf = col1.text_input("Codice Fiscale")
-            tel = col2.text_input("Telefono")
-            email = col2.text_input("Email")
+            c1, c2 = st.columns(2)
+            nome = c1.text_input("Nome e Cognome")
+            cf = c1.text_input("Codice Fiscale")
+            tel = c2.text_input("Telefono")
+            email = c2.text_input("Email")
             
+        # --- INDIRIZZO (RESTAURADO) ---
         with st.expander("🏠 INDIRIZZO", expanded=True):
-            col3, col4, col5 = st.columns([2, 1, 1])
-            rua = col3.text_input("Via/Piazza")
-            cidade = col4.text_input("Città")
-            cap = col5.text_input("CAP")
-            regiao = st.selectbox("Regione", ["Lombardia", "Lazio", "Veneto", "Piemonte", "Outra"])
+            c3, c4, c5 = st.columns([2, 1, 1])
+            rua = c3.text_input("Via/Piazza")
+            cidade = c4.text_input("Città")
+            cap = c5.text_input("CAP")
+            regiao = st.selectbox("Regione", LISTA_REGIONI)
 
+        # --- DOCUMENTI (4 LINHAS CONFORME FOTO) ---
         with st.expander("📄 DOCUMENTO", expanded=True):
-            col6, col7, col8 = st.columns(3)
-            tipo_doc = col6.selectbox("Tipo Documento", ["C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente"])
-            num_doc = col7.text_input("Numero Documento")
-            val_doc = col8.date_input("Scadenza Documento", value=date.today())
+            for i in range(1, 5):
+                col_a, col_b, col_c = st.columns([1.5, 1.5, 1])
+                col_a.selectbox(f"Tipo Documento {i}", TIPOS_DOC, key=f"t{i}")
+                col_b.text_input(f"Numero Documento {i}", key=f"n{i}")
+                col_c.date_input(f"Scadenza Documento {i}", value=date.today(), key=f"v{i}")
 
+        # --- ANNOTAZIONI ---
         st.subheader("📝 ANNOTAZIONI")
-        notas = st.text_area("Altre Informazioni")
+        notas = st.text_area("Altre Informações", height=150)
 
+        # --- CARICAMENTO DRIVE ---
         st.subheader("🗂️ CARICAMENTO DRIVE")
-        f_doc = st.file_uploader("Trascina qui i file del cliente")
+        f_doc = st.file_uploader("Trascina qui i file do cliente")
 
         if st.button("🚀 SALVA CLIENTE COMPLETO"):
             if nome and cf:
                 srb_id = f"SRB{len(st.session_state.clienti)+1:04d}"
-                # Lógica de salvar...
-                st.session_state.clienti.append({
-                    "ID": srb_id, "Nome": nome, "CF": cf, "Tel": tel, 
-                    "Regione": regiao, "Doc": num_doc, "Scadenza": val_doc
-                })
-                st.success(f"Cliente {srb_id} - {nome} salvo com sucesso!")
-            else: st.error("Nome e Codice Fiscale são obrigatórios!")
+                # Lógica de salvar e Drive...
+                st.session_state.clienti.append({"ID": srb_id, "Nome": nome, "Regione": regiao})
+                st.success(f"Cliente {srb_id} salvato!")
+            else: st.error("Dati obbligatori mancanti!")
 
     with t2:
         if st.session_state.clienti:
-            st.table(pd.DataFrame(st.session_state.clienti))
-        else: st.info("Nessun cliente registrato.")
+            st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
-# Manutenção das Práticas
-elif menu == "Nuova Pratica":
-    st.header("📂 Nuova Pratica")
-    # Código das práticas aqui...
+elif menu == "Dashboard":
+    st.header("📊 Dashboard")
+    st.metric("Total Clienti", len(st.session_state.clienti))
