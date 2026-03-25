@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date
@@ -11,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO
+# 1. CONFIGURAZIONE E CSS AVANZATO (CORREÇÃO FORTE)
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -19,7 +18,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS ATUALIZADO - Correções específicas solicitadas
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -49,28 +47,40 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== MENUS SUSPENSOS (Regione e Tipo Doc) ==================== */
+    /* ==================== MENUS SUSPENSOS (Regione e Tipo Doc) - Correção mais forte ==================== */
     [data-baseweb="select"] > div,
     div[role="listbox"], 
     div[role="listbox"] ul, 
     div[role="listbox"] li,
     div[data-baseweb="menu"], 
-    [data-baseweb="popover"] {
+    [data-baseweb="popover"],
+    ul[data-testid="stSelectboxVirtualDropdown"] {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
-    div[role="listbox"] li:hover {
+    div[role="listbox"] li:hover,
+    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
         background-color: #e8e6e4 !important;
     }
 
-    /* ==================== CALENDÁRIO (Scadenza) - Corrigido ==================== */
-    .stDateInput > div > div {
+    /* ==================== CALENDÁRIO SCADENZA (Date Input + Popup) - Correção forte ==================== */
+    .stDateInput > div > div,
+    .stDateInput input,
+    div[data-baseweb="calendar"],
+    div[data-baseweb="calendar"] div,
+    div[data-baseweb="calendar"] button,
+    div[data-baseweb="calendar"] > div {
         background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
-    .stDateInput input {
-        background-color: #f3f2f1 !important;
+
+    /* Dias do calendário e hover */
+    div[data-baseweb="calendar"] button:hover {
+        background-color: #e8e6e4 !important;
+    }
+    div[data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: #bc9e92 !important;
         color: black !important;
     }
 
@@ -91,7 +101,7 @@ st.markdown("""
         border: 1px solid #a88a7e !important;
     }
 
-    /* Botão grande REGISTRA CLIENTE */
+    /* Botão grande */
     button[kind="primary"], 
     .stButton > button {
         background-color: #bc9e92 !important;
@@ -114,7 +124,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE E SEGURANÇA
+# O resto do código permanece exatamente igual (não mexi em nada)
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
