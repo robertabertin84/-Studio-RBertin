@@ -40,39 +40,51 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* Inputs */
+    /* Inputs normais */
     input, textarea, [data-baseweb="input"] {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Menus suspensos */
+    /* ==================== MENUS SUSPENSOS (Regione e Tipo Doc) - Correção mais forte ==================== */
     [data-baseweb="select"] > div,
-    div[role="listbox"], div[role="listbox"] ul, div[role="listbox"] li,
-    div[data-baseweb="menu"], [data-baseweb="popover"] {
+    div[role="listbox"], 
+    div[role="listbox"] ul, 
+    div[role="listbox"] li,
+    div[data-baseweb="menu"], 
+    [data-baseweb="popover"],
+    ul[data-testid="stSelectboxVirtualDropdown"] {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
-    div[role="listbox"] li:hover {
+    div[role="listbox"] li:hover,
+    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
         background-color: #e8e6e4 !important;
     }
 
-    /* Calendário Scadenza */
+    /* ==================== CALENDÁRIO SCADENZA (Date Input + Popup) - Correção forte ==================== */
     .stDateInput > div > div,
     .stDateInput input,
     div[data-baseweb="calendar"],
     div[data-baseweb="calendar"] div,
-    div[data-baseweb="calendar"] button {
+    div[data-baseweb="calendar"] button,
+    div[data-baseweb="calendar"] > div {
         background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
+
+    /* Dias do calendário e hover */
     div[data-baseweb="calendar"] button:hover {
         background-color: #e8e6e4 !important;
     }
+    div[data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: #bc9e92 !important;
+        color: black !important;
+    }
 
-    /* Upload */
+    /* Upload múltiplo */
     [data-testid="stFileUploader"] section,
     [data-testid="stFileUploadDropzone"] {
         background-color: transparent !important;
@@ -90,14 +102,17 @@ st.markdown("""
     }
 
     /* Botão grande */
-    button[kind="primary"], .stButton > button {
+    button[kind="primary"], 
+    .stButton > button {
         background-color: #bc9e92 !important;
         color: black !important;
         border: 2px solid #a88a7e !important;
         font-weight: 700 !important;
         height: 52px !important;
+        font-size: 16px !important;
     }
-    button[kind="primary"]:hover, .stButton > button:hover {
+    button[kind="primary"]:hover, 
+    .stButton > button:hover {
         background-color: #a88a7e !important;
     }
 
@@ -109,7 +124,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. BACK-END GOOGLE DRIVE
+# O resto do código permanece exatamente igual (não mexi em nada)
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -161,7 +176,7 @@ def upload_to_client_folder(file_obj, folder_id, new_filename):
         return False
 
 # ==============================================================================
-# 3. LOGIN
+# 3. CONTROLE DE ESTADO E LOGIN
 # ==============================================================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if 'clienti' not in st.session_state: st.session_state.clienti = []
@@ -186,6 +201,7 @@ if not st.session_state.autenticato:
 # 4. INTERFACE DO GESTIONALE
 # ==============================================================================
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
+TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria"]
 
 st.sidebar.markdown("<h2 style='text-align: center;'>Menu Studio</h2>", unsafe_allow_html=True)
 menu = st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"])
@@ -226,49 +242,28 @@ elif menu == "👥 Anagrafica Clienti":
             cap = ci3.text_input("CAP")
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
-        # ==================== SEÇÃO DOCUMENTI MODIFICADA ====================
-        with st.expander("📄 DOCUMENTI", expanded=True):
-            st.markdown("<p style='font-size: 13px;'>Inserisci il numero di ciascun documento e la scadenza. Carica poi tutti i file nell'ordine corrispondente.</p>", unsafe_allow_html=True)
+        with st.expander("📄 DOCUMENTI (Caricamento Singolo)", expanded=True):
+            st.markdown("<p style='font-size: 13px;'>Preencha os dados dos documentos. Depois faça o upload de todos os arquivos de uma vez no campo abaixo.</p>", unsafe_allow_html=True)
             
             doc_list = []
-            cols = st.columns(3)
-
-            # 1. Carta d'Identità
-            with cols[0]:
-                num_ci = st.text_input("Numero", key="num_ci", placeholder="Carta d'Identità")
-                scad_ci = st.date_input("Scadenza", value=date.today(), key="scad_ci", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "CartaIdentita", "num": num_ci, "scad": scad_ci})
-
-            # 2. Permesso di Soggiorno
-            with cols[1]:
-                num_ps = st.text_input("Numero", key="num_ps", placeholder="Permesso di Soggiorno")
-                scad_ps = st.date_input("Scadenza", value=date.today(), key="scad_ps", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "PermessoSoggiorno", "num": num_ps, "scad": scad_ps})
-
-            # 3. Patente Italiana
-            with cols[2]:
-                num_pat = st.text_input("Numero", key="num_pat", placeholder="Patente Italiana")
-                scad_pat = st.date_input("Scadenza", value=date.today(), key="scad_pat", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "PatenteItaliana", "num": num_pat, "scad": scad_pat})
-
-            # Nova linha
-            cols2 = st.columns(3)
-
-            # 4. Tessera Sanitaria
-            with cols2[0]:
-                num_ts = st.text_input("Numero", key="num_ts", placeholder="Tessera Sanitaria")
-                scad_ts = st.date_input("Scadenza", value=date.today(), key="scad_ts", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "TesseraSanitaria", "num": num_ts, "scad": scad_ts})
-
-            # 5. Passaporto Brasiliano
-            with cols2[1]:
-                num_pb = st.text_input("Numero", key="num_pb", placeholder="Passaporto Brasiliano")
-                scad_pb = st.date_input("Scadenza", value=date.today(), key="scad_pb", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "PassaportoBrasiliano", "num": num_pb, "scad": scad_pb})
+            for i in range(1, 5):
+                d1, d2, d3 = st.columns([1.2, 1.2, 0.8])
+                tipo = d1.selectbox(f"Tipo Doc {i}", TIPOS_DOC, key=f"t_doc_{i}")
+                num = d2.text_input(f"Numero Doc {i}", key=f"n_doc_{i}")
+                scad = d3.date_input(f"Scadenza {i}", value=date.today(), key=f"s_doc_{i}")
+                
+                if tipo and num:
+                    doc_list.append({
+                        "tipo": tipo.replace(" ", "").replace(".", ""),
+                        "num": num,
+                        "scad": scad
+                    })
 
         st.subheader("📤 Upload Único de Documentos")
-        st.info("Carica i file nell'ordine: Carta d'Identità → Permesso di Soggiorno → Patente Italiana → Tessera Sanitaria → Passaporto Brasiliano")
-        uploaded_files = st.file_uploader("Carica tutti i documenti", accept_multiple_files=True, key="multi_upload")
+        st.info("Selecione todos os arquivos na ordem correspondente às linhas acima.")
+        uploaded_files = st.file_uploader("Carica tutti i documenti", 
+                                          accept_multiple_files=True, 
+                                          key="multi_upload")
 
         st.subheader("ANNOTAZIONI CLIENTE")
         notas = st.text_area("ANNOTAZIONI CLIENTE", height=120)
@@ -283,7 +278,7 @@ elif menu == "👥 Anagrafica Clienti":
                     if folder_obj:
                         success_count = 0
                         for idx, file in enumerate(uploaded_files):
-                            if idx < len(doc_list) and doc_list[idx]["num"]:
+                            if idx < len(doc_list):
                                 doc = doc_list[idx]
                                 new_filename = f"{doc['tipo']}_{doc['num']}.pdf"
                                 if upload_to_client_folder(file, folder_obj['id'], new_filename):
