@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO (RESTAURADO ORIGINAL)
+# 1. CONFIGURAZIONE E CSS AVANZATO (DESIGN ORIGINAL RBERTIN)
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -26,7 +26,7 @@ st.markdown("""
     }
 
     /* Barras de Título (Expanders) */
-    .st-emotion-cache-p6495m, .st-emotion-cache-1h9bt9w, [data-testid="stExpander"] details summary {
+    [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
         border-radius: 8px !important;
@@ -75,6 +75,7 @@ st.markdown("""
         background-color: #bc9e92 !important;
         color: black !important;
         border: 2px solid #a88a7e !important;
+        width: 100% !important;
     }
 
     header { visibility: hidden; }
@@ -83,7 +84,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE (RESTAURADO)
+# 2. SISTEMA DE BACK-END: GOOGLE DRIVE
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -120,7 +121,7 @@ def upload_to_client_folder(file_obj, folder_id, new_filename):
     except: return False
 
 # ==============================================================================
-# 3. CONTROLE DE ESTADO E LOGIN (RESTAURADO)
+# 3. CONTROLE DE ESTADO E LOGIN
 # ==============================================================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if 'clienti' not in st.session_state: st.session_state.clienti = []
@@ -141,14 +142,14 @@ if not st.session_state.autenticato:
     st.stop()
 
 # ==============================================================================
-# 4. INTERFACE DO GESTIONALE (RESTAURADA E ATUALIZADA)
+# 4. INTERFACE DO GESTIONALE
 # ==============================================================================
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 
 st.sidebar.markdown("<h2 style='text-align: center;'>Menu Studio</h2>", unsafe_allow_html=True)
 menu = st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"])
 
-# --- DASHBOARD (RESTAURADA) ---
+# --- DASHBOARD ---
 if menu == "📊 Dashboard":
     st.header("📊 Stato Generale dello Studio")
     m1, m2, m3, m4 = st.columns(4)
@@ -165,7 +166,7 @@ if menu == "📊 Dashboard":
             df_cli = pd.DataFrame(st.session_state.clienti)
             st.bar_chart(df_cli['Regione'].value_counts())
 
-# --- ANAGRAFICA CLIENTI (ATUALIZADA CONFORME PEDIDO) ---
+# --- ANAGRAFICA CLIENTI ---
 elif menu == "👥 Anagrafica Clienti":
     st.header("👥 Gestione Anagrafica e Documentale")
     t_aba1, t_aba2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
@@ -188,26 +189,26 @@ elif menu == "👥 Anagrafica Clienti":
         with st.expander("📄 DOCUMENTI", expanded=True):
             st.markdown("<p style='font-size: 13px;'>Inserisci numeri e scadenze. Carica i file nel campo in basso.</p>", unsafe_allow_html=True)
             
-            # DOCUMENTOS FIXOS SOLICITADOS
+            # DOCUMENTOS FIXOS COM ESPAÇAMENTO ELIMINADO
             DOCS_FIXOS = ["Carta d'Identità", "Permesso di Soggiorno", "Patente Italiana", "Tessera Sanitaria", "Passaporto Brasiliano"]
             
             doc_entries = []
-            h1, h2, h3 = st.columns([1.5, 1, 1])
+            # Ajuste de colunas para aproximar o nome do número (0.8 para o nome)
+            h1, h2, h3 = st.columns([0.8, 1.2, 1.0])
             h1.markdown("**Documento**")
             h2.markdown("**Numero**")
             h3.markdown("**Scadenza**")
 
             for d_name in DOCS_FIXOS:
-                c1, c2, c3 = st.columns([1.5, 1, 1])
+                c1, c2, c3 = st.columns([0.8, 1.2, 1.0])
                 c1.write(f"**{d_name}**")
                 n_val = c2.text_input("Numero", key=f"n_{d_name}", label_visibility="collapsed", placeholder="Numero")
-                # Formato europeu DD/MM/YYYY
                 s_val = c3.date_input("Scadenza", value=date.today(), key=f"s_{d_name}", label_visibility="collapsed", format="DD/MM/YYYY")
                 if n_val:
                     doc_entries.append({"tipo": d_name, "num": n_val, "scad": s_val})
 
         st.subheader("📤 Upload Documenti (Lotto)")
-        uploaded_files = st.file_uploader("Seleziona tutti i file dei documenti sopra", accept_multiple_files=True)
+        uploaded_files = st.file_uploader("Seleziona tutti i file dei documentos acima", accept_multiple_files=True)
 
         st.subheader("📝 ANNOTAZIONI")
         notas = st.text_area("Note e dettagli...", height=100)
@@ -218,7 +219,6 @@ elif menu == "👥 Anagrafica Clienti":
                 with st.spinner("Sincronizzazione Drive..."):
                     folder_obj, error = manage_drive_structure(nome, srb_code)
                     if folder_obj:
-                        service, _ = init_google_drive()
                         for idx, f in enumerate(uploaded_files):
                             if idx < len(doc_entries):
                                 d = doc_entries[idx]
@@ -235,7 +235,7 @@ elif menu == "👥 Anagrafica Clienti":
         if st.session_state.clienti:
             st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
-# --- OUTRAS PÁGINAS (RESTAURADAS) ---
+# --- OUTRAS PÁGINAS ---
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
 elif menu == "🗄️ Archivio":
