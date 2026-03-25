@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO (CORREÇÃO FORTE)
+# 1. CONFIGURAZIONE E CSS AVANZATO
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -18,14 +18,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# CSS (mantenuto quello che funzionava)
 st.markdown("""
     <style>
-    /* Fundo Global */
     .stApp, [data-testid="stSidebar"], [data-testid="stSidebarContent"] { 
         background-color: #f4e7e1 !important; 
     }
-
-    /* Expanders */
     .st-emotion-cache-p6495m, .st-emotion-cache-1h9bt9w, [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
@@ -33,23 +31,16 @@ st.markdown("""
         border: 1px solid #a88a7e !important;
         padding: 12px !important;
     }
-    
-    /* Texto geral */
     label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
         color: black !important; 
         font-weight: 700 !important;
     }
-
-    /* Inputs */
-    input, textarea, [data-baseweb="input"] {
+    input, textarea, [data-baseweb="input"], .stDateInput div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
-
-    /* Menus suspensos */
-    [data-baseweb="select"] > div,
-    div[role="listbox"], div[role="listbox"] ul, div[role="listbox"] li,
+    [data-baseweb="select"] > div, div[role="listbox"], div[role="listbox"] ul, div[role="listbox"] li,
     div[data-baseweb="menu"], [data-baseweb="popover"] {
         background-color: #f3f2f1 !important;
         color: black !important;
@@ -57,66 +48,47 @@ st.markdown("""
     div[role="listbox"] li:hover {
         background-color: #e8e6e4 !important;
     }
-
-    /* Calendário Scadenza */
-    .stDateInput > div > div,
-    .stDateInput input,
-    div[data-baseweb="calendar"],
-    div[data-baseweb="calendar"] div,
-    div[data-baseweb="calendar"] button {
+    .stDateInput input, .stDateInput > div > div {
         background-color: #f3f2f1 !important;
         color: black !important;
-        border: 1px solid #bc9e92 !important;
     }
-    div[data-baseweb="calendar"] button:hover {
-        background-color: #e8e6e4 !important;
-    }
-
-    /* Upload */
-    [data-testid="stFileUploader"] section,
-    [data-testid="stFileUploadDropzone"] {
+    [data-testid="stFileUploader"] {
         background-color: transparent !important;
-        border: 2px dashed #bc9e92 !important;
-        border-radius: 8px !important;
-        padding: 20px !important;
+        border: none !important;
+        padding: 0 !important;
+        margin-top: 10px !important;
+    }
+    [data-testid="stFileUploaderSection"] {
+        display: none !important;
     }
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
         width: 100% !important;
-        height: 48px !important;
-        border-radius: 6px !important;
+        border-radius: 4px !important;
         border: 1px solid #a88a7e !important;
+        height: 42px !important;
     }
-
-    /* Botão grande */
-    button[kind="primary"], .stButton > button {
+    button, [data-testid="baseButton-primary"] {
         background-color: #bc9e92 !important;
         color: black !important;
         border: 2px solid #a88a7e !important;
-        font-weight: 700 !important;
-        height: 52px !important;
     }
-    button[kind="primary"]:hover, .stButton > button:hover {
-        background-color: #a88a7e !important;
-    }
-
-    [data-testid="column"] { padding: 0 5px !important; }
-    [data-testid="stHorizontalBlock"] { gap: 0.3rem !important; }
-
-    header, footer { visibility: hidden; }
+    button:hover { background-color: #a88a7e !important; }
+    header { visibility: hidden; }
+    footer { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. BACK-END GOOGLE DRIVE
+# 2. SISTEMA DI BACK-END: GOOGLE DRIVE
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 def init_google_drive():
     try:
         if "gcp_service_account" not in st.secrets:
-            return None, "Secret gcp_service_account não encontrada."
+            return None, "Secret gcp_service_account non trovata."
         info = st.secrets["gcp_service_account"]
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
         return build('drive', 'v3', credentials=creds), None
@@ -149,19 +121,18 @@ def manage_drive_structure(nome_cliente, srb_code):
     except Exception as e:
         return None, f"Errore Drive: {e}"
 
-def upload_to_client_folder(file_obj, folder_id, new_filename):
+def upload_to_client_folder(file_obj, folder_id):
     service, _ = init_google_drive()
     if not service: return False
     try:
-        meta = {'name': new_filename, 'parents': [folder_id]}
+        meta = {'name': file_obj.name, 'parents': [folder_id]}
         media = MediaIoBaseUpload(io.BytesIO(file_obj.read()), mimetype=file_obj.type, resumable=True)
         service.files().create(body=meta, media_body=media).execute()
         return True
-    except:
-        return False
+    except: return False
 
 # ==============================================================================
-# 3. LOGIN
+# 3. CONTROLE DI STATO E LOGIN
 # ==============================================================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if 'clienti' not in st.session_state: st.session_state.clienti = []
@@ -199,6 +170,7 @@ if menu == "📊 Dashboard":
     m3.metric("🔓 Pratiche Aperte", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta"))
     m4.metric("🔒 Pratiche Chiuse", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Chiusa"))
     
+    st.write("---")
     if st.session_state.clienti:
         col_graf1, col_graf2 = st.columns(2)
         with col_graf1:
@@ -206,7 +178,7 @@ if menu == "📊 Dashboard":
             df_cli = pd.DataFrame(st.session_state.clienti)
             st.bar_chart(df_cli['Regione'].value_counts())
 
-# --- ANAGRAFICA CLIENTI ---
+# --- ANAGRAFICA CLIENTI (CON LE MODIFICHE RICHIESTE) ---
 elif menu == "👥 Anagrafica Clienti":
     st.header("👥 Gestione Anagrafica e Documentale")
     t_aba1, t_aba2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
@@ -226,49 +198,50 @@ elif menu == "👥 Anagrafica Clienti":
             cap = ci3.text_input("CAP")
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
-        # ==================== SEÇÃO DOCUMENTI MODIFICADA ====================
-        with st.expander("📄 DOCUMENTI", expanded=True):
-            st.markdown("<p style='font-size: 13px;'>Inserisci il numero di ciascun documento e la scadenza. Carica poi tutti i file nell'ordine corrispondente.</p>", unsafe_allow_html=True)
+        # SEZIONE DOCUMENTI - Formato originale + nomi modificati
+        with st.expander("📄 DOCUMENTI (Caricamento Singolo)", expanded=True):
+            st.markdown("<p style='font-size: 13px;'>Seleziona il tipo e carica il file. Il sistema creerà automaticamente la cartella nel Drive.</p>", unsafe_allow_html=True)
             
             doc_list = []
-            cols = st.columns(3)
+            # Documento 1
+            d1, d2, d3, d4 = st.columns([1.3, 1.1, 0.9, 1.1])
+            st.markdown("**Carta d'Identità**", unsafe_allow_html=True)
+            num1 = d2.text_input("Numero", key="n_doc_1")
+            scad1 = d3.date_input("Scadenza", value=date.today(), key="s_doc_1", format="DD/MM/YYYY")
+            file1 = d4.file_uploader("Upload", key="f_doc_1")
+            if num1: doc_list.append({"tipo": "CartaIdentita", "num": num1, "scad": scad1, "file": file1})
 
-            # 1. Carta d'Identità
-            with cols[0]:
-                num_ci = st.text_input("Numero", key="num_ci", placeholder="Carta d'Identità")
-                scad_ci = st.date_input("Scadenza", value=date.today(), key="scad_ci", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "CartaIdentita", "num": num_ci, "scad": scad_ci})
+            # Documento 2
+            d1, d2, d3, d4 = st.columns([1.3, 1.1, 0.9, 1.1])
+            st.markdown("**Permesso di Soggiorno**", unsafe_allow_html=True)
+            num2 = d2.text_input("Numero", key="n_doc_2")
+            scad2 = d3.date_input("Scadenza", value=date.today(), key="s_doc_2", format="DD/MM/YYYY")
+            file2 = d4.file_uploader("Upload", key="f_doc_2")
+            if num2: doc_list.append({"tipo": "PermessoSoggiorno", "num": num2, "scad": scad2, "file": file2})
 
-            # 2. Permesso di Soggiorno
-            with cols[1]:
-                num_ps = st.text_input("Numero", key="num_ps", placeholder="Permesso di Soggiorno")
-                scad_ps = st.date_input("Scadenza", value=date.today(), key="scad_ps", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "PermessoSoggiorno", "num": num_ps, "scad": scad_ps})
+            # Documento 3
+            d1, d2, d3, d4 = st.columns([1.3, 1.1, 0.9, 1.1])
+            st.markdown("**Patente Italiana**", unsafe_allow_html=True)
+            num3 = d2.text_input("Numero", key="n_doc_3")
+            scad3 = d3.date_input("Scadenza", value=date.today(), key="s_doc_3", format="DD/MM/YYYY")
+            file3 = d4.file_uploader("Upload", key="f_doc_3")
+            if num3: doc_list.append({"tipo": "PatenteItaliana", "num": num3, "scad": scad3, "file": file3})
 
-            # 3. Patente Italiana
-            with cols[2]:
-                num_pat = st.text_input("Numero", key="num_pat", placeholder="Patente Italiana")
-                scad_pat = st.date_input("Scadenza", value=date.today(), key="scad_pat", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "PatenteItaliana", "num": num_pat, "scad": scad_pat})
+            # Documento 4
+            d1, d2, d3, d4 = st.columns([1.3, 1.1, 0.9, 1.1])
+            st.markdown("**Tessera Sanitaria**", unsafe_allow_html=True)
+            num4 = d2.text_input("Numero", key="n_doc_4")
+            scad4 = d3.date_input("Scadenza", value=date.today(), key="s_doc_4", format="DD/MM/YYYY")
+            file4 = d4.file_uploader("Upload", key="f_doc_4")
+            if num4: doc_list.append({"tipo": "TesseraSanitaria", "num": num4, "scad": scad4, "file": file4})
 
-            # Nova linha
-            cols2 = st.columns(3)
-
-            # 4. Tessera Sanitaria
-            with cols2[0]:
-                num_ts = st.text_input("Numero", key="num_ts", placeholder="Tessera Sanitaria")
-                scad_ts = st.date_input("Scadenza", value=date.today(), key="scad_ts", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "TesseraSanitaria", "num": num_ts, "scad": scad_ts})
-
-            # 5. Passaporto Brasiliano
-            with cols2[1]:
-                num_pb = st.text_input("Numero", key="num_pb", placeholder="Passaporto Brasiliano")
-                scad_pb = st.date_input("Scadenza", value=date.today(), key="scad_pb", format="DD/MM/YYYY")
-            doc_list.append({"tipo": "PassaportoBrasiliano", "num": num_pb, "scad": scad_pb})
-
-        st.subheader("📤 Upload Único de Documentos")
-        st.info("Carica i file nell'ordine: Carta d'Identità → Permesso di Soggiorno → Patente Italiana → Tessera Sanitaria → Passaporto Brasiliano")
-        uploaded_files = st.file_uploader("Carica tutti i documenti", accept_multiple_files=True, key="multi_upload")
+            # Documento 5 - Passaporto Brasiliano
+            d1, d2, d3, d4 = st.columns([1.3, 1.1, 0.9, 1.1])
+            st.markdown("**Passaporto Brasiliano**", unsafe_allow_html=True)
+            num5 = d2.text_input("Numero", key="n_doc_5")
+            scad5 = d3.date_input("Scadenza", value=date.today(), key="s_doc_5", format="DD/MM/YYYY")
+            file5 = d4.file_uploader("Upload", key="f_doc_5")
+            if num5: doc_list.append({"tipo": "PassaportoBrasiliano", "num": num5, "scad": scad5, "file": file5})
 
         st.subheader("ANNOTAZIONI CLIENTE")
         notas = st.text_area("ANNOTAZIONI CLIENTE", height=120)
@@ -276,37 +249,28 @@ elif menu == "👥 Anagrafica Clienti":
         if st.button("🚀 REGISTRA CLIENTE E SINCRONIZZA DRIVE"):
             if nome and cf:
                 srb_code = f"SRB{len(st.session_state.clienti)+1:04d}"
-                
-                with st.spinner("Creazione cartella Drive e upload documenti..."):
+                with st.spinner("Creazione cartella Drive in corso..."):
                     folder_obj, error = manage_drive_structure(nome, srb_code)
-                    
                     if folder_obj:
-                        success_count = 0
-                        for idx, file in enumerate(uploaded_files):
-                            if idx < len(doc_list) and doc_list[idx]["num"]:
-                                doc = doc_list[idx]
-                                new_filename = f"{doc['tipo']}_{doc['num']}.pdf"
-                                if upload_to_client_folder(file, folder_obj['id'], new_filename):
-                                    success_count += 1
+                        for d in doc_list:
+                            if d.get('file'):
+                                upload_to_client_folder(d['file'], folder_obj['id'])
                         
                         st.session_state.clienti.append({
-                            "ID": srb_code, 
-                            "Nome": nome, 
-                            "CF": cf, 
-                            "Regione": regiao,
+                            "ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao,
                             "Link": folder_obj['webViewLink']
                         })
-                        st.success(f"✅ Cliente {srb_code} registrato con successo! {success_count} documento(s) caricati.")
-                    else:
+                        st.success(f"✅ Cliente {srb_code} salvato con successo!")
+                    else: 
                         st.error(f"Errore Drive: {error}")
-            else:
+            else: 
                 st.error("Inserire almeno Nome e Codice Fiscale!")
 
     with t_aba2:
         if st.session_state.clienti:
             st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
-# --- OUTRAS PÁGINAS ---
+# --- ALTRE PAGINE (tutto ripristinato) ---
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
     
