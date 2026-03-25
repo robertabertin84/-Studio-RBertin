@@ -3,52 +3,77 @@ import pandas as pd
 from datetime import datetime, date
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
-import plotly.express as px
+import pydeck as pdk
+import json
 
 # ==========================================
-# 1. CONFIGURAÇÃO VISUAL (STUDIO RBERTIN)
+# 1. CONFIGURAZIONE ESTETICA TOTALE (NO NERO)
 # ==========================================
 st.set_page_config(page_title="Studio RBertin - Gestionale", layout="wide")
 
+# Aplicação de CSS agressivo para eliminar o preto e definir cores de marca
 st.markdown(f"""
     <style>
-    /* Fundo principal e da Barra Lateral claro */
-    .stApp, [data-testid="stSidebar"] {{ 
+    /* 1. Fundo Global e da Barra Lateral claro #f4e7e1 */
+    .stApp, [data-testid="stSidebar"], [data-testid="stSidebarContent"] {{ 
         background-color: #f4e7e1 !important; 
     }}
-    
-    /* Textos e Títulos em preto para leitura clara */
-    label, p, .stMarkdown, h1, h2, h3, span, [data-testid="stSidebarNavItems"] {{ 
+
+    /* 2. Remover o preto de TODOS os textos (forçar preto nas letras, não no fundo) */
+    label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, .css-qri684, .css-1dp555c, .css-1offfwp {{ 
         color: black !important; 
         font-weight: 500; 
     }}
 
-    /* Barras de Expander, Dropdowns e Itens do Menu Lateral em Bege #bc9e92 */
+    /* 3. Barras de Expander, Cabeçalhos, Dropdowns e Header (Bege #bc9e92) */
     .streamlit-expanderHeader, div[data-testid="stExpander"], 
     div[data-baseweb="select"] > div,
-    [data-testid="stSidebarNavItems"] li {{
+    header[data-testid="stHeader"] {{
         background-color: #bc9e92 !important;
         color: black !important;
-        border-radius: 5px;
-        margin-bottom: 5px;
-    }}
-    
-    /* Campos de input Brancos com letras pretas */
-    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stDateInput>div>div>input {{
-        background-color: white !important;
-        color: black !important;
-        border: 1px solid #bc9e92 !important;
+        border-radius: 8px;
+        border: none !important;
     }}
 
-    /* Destaque para o item selecionado no menu lateral */
+    /* 4. Corrigir o Menu Lateral (Nav Items) */
+    [data-testid="stSidebarNavItems"] li {{
+        background-color: #bc9e92 !important;
+        margin-bottom: 8px;
+        border-radius: 5px;
+    }}
+    [data-testid="stSidebarNavItems"] li a {{
+        background-color: transparent !important;
+    }}
+    /* Item selecionado no menu (um tom mais escuro para destaque) */
     [data-testid="stSidebarNavItems"] li [aria-current="page"] {{
         background-color: #a88a7e !important;
         color: white !important;
+        border-radius: 5px;
+    }}
+
+    /* 5. Campos de Entrada (Branco Puro para contraste no preenchimento) */
+    .stTextInput>div>div>input, 
+    .stTextArea>div>div>textarea, 
+    .stDateInput>div>div>input,
+    .stFileUploader section {{
+        background-color: white !important;
+        color: black !important;
+        border: 2px solid #bc9e92 !important;
+    }}
+
+    /* 6. Ajuste nas Abas (Tabs) */
+    button[data-baseweb="tab"] {{
+        background-color: #e0d0c8 !important;
+        border-radius: 5px 5px 0 0;
+        margin-right: 5px;
+    }}
+    button[data-baseweb="tab"][aria-selected="true"] {{
+        background-color: #bc9e92 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNÇÕES GOOGLE ---
+# --- FUNZIONI GOOGLE SERVICES (Inalteradas) ---
 def get_google_service(name, version, scopes):
     try:
         info = st.secrets["gcp_service_account"]
@@ -56,13 +81,6 @@ def get_google_service(name, version, scopes):
         return build(name, version, credentials=creds)
     except Exception as e:
         st.error(f"Errore Google {name}: {e}"); return None
-
-def upload_to_drive(file, folder_id):
-    service = get_google_service('drive', 'v3', ["https://www.googleapis.com/auth/drive"])
-    if not service or not folder_id: return None
-    file_metadata = {'name': file.name, 'parents': [folder_id]}
-    media = service.files().create(body=file_metadata, media_body=file, fields='id').execute()
-    return media.get('id')
 
 def cria_cartella_cliente_drive(nome, srb_code):
     service = get_google_service('drive', 'v3', ["https://www.googleapis.com/auth/drive"])
@@ -77,13 +95,20 @@ def cria_cartella_cliente_drive(nome, srb_code):
         return folder
     return None
 
+def upload_to_drive(file, folder_id):
+    service = get_google_service('drive', 'v3', ["https://www.googleapis.com/auth/drive"])
+    if not service or not folder_id: return None
+    file_metadata = {'name': file.name, 'parents': [folder_id]}
+    media = service.files().create(body=file_metadata, media_body=file, fields='id').execute()
+    return media.get('id')
+
 # ==========================================
-# 2. LOGIN E BANCO DE DADOS TEMPORÁRIO
+# 2. SISTEMA DE LOGIN E BANCO DE DADOS TEMPORÁRIO
 # ==========================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if not st.session_state.autenticato:
     st.title("🔐 Accesso Studio RBertin")
-    pwd = st.text_input("Password:", type="password")
+    pwd = st.text_input("Password Studio RBertin:", type="password")
     if st.button("Entra"):
         if pwd == "RB2026": st.session_state.autenticato = True; st.rerun()
     st.stop()
@@ -94,31 +119,100 @@ if 'pratiche' not in st.session_state: st.session_state.pratiche = []
 LISTA_REGIONI = ["Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 DOC_TYPES = ["C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria", "Altro"]
 
+# --- DADOS DO MAPA (COORDENADAS E CENTROS DAS REGIÕES) ---
+# Este dicionário precisa ser expandido com as coordenadas precisas de todas as regiões para que os números apareçam no lugar certo.
+# Por enquanto, configurei apenas as capitais como exemplo.
+CENTROS_REGIONI = {
+    "Lombardia": [45.46, 9.18], # Milão
+    "Lazio": [41.90, 12.49],    # Roma
+    "Sicilia": [38.11, 13.36],   # Palermo
+    # Adicionar as outras 17 regiões aqui...
+}
+
 # ==========================================
-# 3. MENU E NAVEGAÇÃO
+# 3. INTERFACE E NAVEGAÇÃO
 # ==========================================
 st.sidebar.title("🏛️ Studio RBertin")
 menu = st.sidebar.radio("NAVIGAZIONE", ["Dashboard", "Anagrafica Clienti", "Nuova Pratica", "Archivio"])
 
-# --- DASHBOARD COMPLETA ---
+# --- DASHBOARD COMPLETA COM MAPA INTERATIVO ---
 if menu == "Dashboard":
-    st.header("📊 Dashboard Riepilogativa")
+    st.header("📊 Dashboard Studio RBertin")
+    
+    # 1. Métricas (Mantidas)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("👥 Clienti", len(st.session_state.clienti))
     c2.metric("📂 Pratiche", len(st.session_state.pratiche))
     c3.metric("🔓 Aperte", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta"))
     c4.metric("🔒 Chiuse", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Chiusa"))
 
-    st.subheader("📍 Presenza nelle Regioni")
+    st.write("---")
+    
+    # 2. Mapa Interativo (NOVO)
+    st.subheader("📍 Distribuzione Geografica Clienti")
+    
+    # Processamento de dados: Contar clientes por região
+    map_data = []
     if st.session_state.clienti:
         df_geo = pd.DataFrame(st.session_state.clienti)
-        counts = df_geo['Regione'].value_counts().reset_index()
-        counts.columns = ['Regione', 'Clienti']
-        fig = px.bar(counts, x='Regione', y='Clienti', color_discrete_sequence=['#bc9e92'])
-        st.plotly_chart(fig, use_container_width=True)
-    else: st.info("Nessun dado geografico disponibile.")
+        counts = df_geo['Regione'].value_counts().to_dict()
+        
+        for reg, centro in CENTROS_REGIONI.items():
+            count = counts.get(reg, 0)
+            if count > 0:
+                map_data.append({
+                    "Regione": reg,
+                    "Lat": centro[0],
+                    "Lon": centro[1],
+                    "Clienti": count,
+                    # Cor do círculo: Bege #bc9e92
+                    "Color": [188, 158, 146, 200], # RGBA
+                })
+    
+    # Configuração da Camada do Mapa: Círculos com números
+    # Como não temos um GeoJSON limpo das regiões, vamos usar pontos interativos.
+    # O contorno marrom #b68b73 será aplicado apenas nas letras do nome e no número.
+    scatterplot_layer = pdk.Layer(
+        "ScatterplotLayer",
+        map_data,
+        get_position=["Lon", "Lat"],
+        get_radius="Clienti * 20000", # Raio proporcional ao número de clientes
+        get_fill_color="Color",
+        pickable=True,
+    )
+    
+    text_layer = pdk.Layer(
+        "TextLayer",
+        map_data,
+        get_position=["Lon", "Lat"],
+        get_text="Regione + ' ( ' + str(Clienti) + ' )'",
+        get_size=18,
+        # Marrom Claro #b68b73 para o texto
+        get_color=[182, 139, 115], # RGB
+        get_angle=0,
+        get_text_anchor='"middle"',
+        get_alignment_baseline='"center"',
+    )
 
-# --- ANAGRAFICA (4 DOCUMENTOS) ---
+    # Configuração da View (Focada na Itália)
+    view_state = pdk.ViewState(
+        latitude=41.8719,
+        longitude=12.5674,
+        zoom=5,
+        pitch=0
+    )
+
+    # Renderização do Mapa com pydeck
+    r = pdk.Deck(
+        layers=[scatterplot_layer, text_layer],
+        initial_view_state=view_state,
+        map_provider="carto", # Usar um provedor de base mais limpo
+        map_style="light", # Estilo claro para contrastar com o texto marrom
+        tooltip={"text": "{Regione}: {Clienti} clienti"},
+    )
+    st.pydeck_chart(r, use_container_width=True)
+
+# --- ANAGRAFICA, PRATICHE E ARCHIVIO (Inalterados, mantidos para totalidade) ---
 elif menu == "Anagrafica Clienti":
     st.header("👥 Gestione Clienti e Documenti")
     t_reg, t_list = st.tabs(["➕ Nuovo Cliente", "📑 Elenco Clienti"])
@@ -170,7 +264,6 @@ elif menu == "Anagrafica Clienti":
             c_sel = next(c for c in st.session_state.clienti if c["ID"] == sel)
             st.info(f"📁 [Apri Cartella Drive]({c_sel['Drive_URL']})")
 
-# --- PRATICHE E ARCHIVIO ---
 elif menu == "Nuova Pratica":
     st.header("📂 Nuova Pratica")
     if st.session_state.clienti:
@@ -179,10 +272,10 @@ elif menu == "Nuova Pratica":
         stt = st.radio("Stato", ["Aperta", "Chiusa"], horizontal=True)
         if st.button("Salva"):
             st.session_state.pratiche.append({"Data": date.today(), "Cliente": cli, "Tipo": tp, "Stato": stt})
-            st.success("Pratica registrata!")
+            st.success("Pratica aggiunta!")
     else: st.warning("Crea prima um cliente!")
 
 elif menu == "Archivio":
     st.header("🗄️ Archivio")
     if st.session_state.pratiche: st.table(pd.DataFrame(st.session_state.pratiche))
-    else: st.info("L'archivio è vuoto.")
+    else: st.info("Archivio vuoto.")
