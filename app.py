@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO
+# 1. CONFIGURAZIONE E CSS AVANZADO (Corrigido)
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -18,7 +18,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS ATUALIZADO - Correção forte para todos os menus suspensos
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -26,107 +25,66 @@ st.markdown("""
         background-color: #f4e7e1 !important; 
     }
 
-    /* Barras de Título (Expanders) */
+    /* Expanders */
     .st-emotion-cache-p6495m, .st-emotion-cache-1h9bt9w, [data-testid="stExpander"] details summary {
         background-color: #bc9e92 !important;
         color: black !important;
         border-radius: 8px !important;
         border: 1px solid #a88a7e !important;
         padding: 12px !important;
-        font-size: 16px !important;
     }
     
-    /* Texto em Preto Negrito */
+    /* Texto */
     label, p, h1, h2, h3, h4, span, li, div, .stMarkdown, [data-testid="stMetricValue"] { 
         color: black !important; 
         font-weight: 700 !important;
     }
 
-    /* Inputs e DateInput */
+    /* Inputs */
     input, textarea, [data-baseweb="input"], .stDateInput div {
         background-color: white !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== CORREÇÃO FORTE PARA TODOS OS MENUS SUSPENSOS (Tipo Doc, Regione, etc.) ==================== */
-    /* Campo fechado do selectbox */
-    div[data-baseweb="select"] > div,
-    .stSelectbox > div > div {
-        background-color: #f3f2f1 !important;
-        color: black !important;
-        border: 1px solid #bc9e92 !important;
-    }
-
-    /* Menu dropdown aberto (lista que desce) */
-    div[role="listbox"],
-    div[role="listbox"] ul,
-    div[role="listbox"] li,
-    div[data-baseweb="menu"],
-    [data-baseweb="popover"],
-    ul[data-testid="stSelectboxVirtualDropdown"] {
+    /* MENUS SUSPENSOS - Correção forte */
+    [data-baseweb="select"] > div,
+    div[role="listbox"], div[role="listbox"] ul, div[role="listbox"] li,
+    div[data-baseweb="menu"], [data-baseweb="popover"] {
         background-color: #f3f2f1 !important;
         color: black !important;
     }
-
-    /* Hover nos itens do menu */
-    div[role="listbox"] li:hover,
-    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+    div[role="listbox"] li:hover {
         background-color: #e8e6e4 !important;
     }
 
-    /* ==================== ELIMINAÇÃO TOTAL DA CAIXA PRETA DO UPLOAD ==================== */
-    [data-testid="stFileUploader"] {
+    /* UPLOAD ÚNICO - Remove fundo preto */
+    [data-testid="stFileUploader"] section,
+    [data-testid="stFileUploadDropzone"] {
         background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        margin-top: 10px !important;
-    }
-    [data-testid="stFileUploaderSection"] {
-        display: none !important;
+        border: 2px dashed #bc9e92 !important;
+        border-radius: 8px !important;
+        padding: 20px !important;
     }
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
         width: 100% !important;
-        border-radius: 4px !important;
+        height: 48px !important;
+        border-radius: 6px !important;
         border: 1px solid #a88a7e !important;
-        height: 42px !important;
+        font-weight: 700 !important;
     }
 
-    /* Redução de espaço */
-    [data-testid="column"] {
-        padding: 0 5px !important;
-    }
-    [data-testid="stHorizontalBlock"] {
-        gap: 0.3rem !important;
-    }
+    [data-testid="column"] { padding: 0 5px !important; }
+    [data-testid="stHorizontalBlock"] { gap: 0.3rem !important; }
 
-    /* Métricas */
-    [data-testid="stMetric"] {
-        background-color: #eaddd7 !important;
-        padding: 15px !important;
-        border-radius: 10px !important;
-        border: 2px solid #bc9e92 !important;
-    }
-
-    /* Botões Gerais */
-    button, [data-testid="baseButton-primary"] {
-        background-color: #bc9e92 !important;
-        color: black !important;
-        border: 2px solid #a88a7e !important;
-    }
-    button:hover { 
-        background-color: #a88a7e !important; 
-    }
-
-    header { visibility: hidden; }
-    footer { visibility: hidden; }
+    header, footer { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE E SEGURANÇA
+# 2. BACK-END GOOGLE DRIVE
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -166,18 +124,20 @@ def manage_drive_structure(nome_cliente, srb_code):
     except Exception as e:
         return None, f"Errore Drive: {e}"
 
-def upload_to_client_folder(file_obj, folder_id):
+def upload_to_client_folder(file_obj, folder_id, new_filename):
+    """Upload com nome personalizado"""
     service, _ = init_google_drive()
     if not service: return False
     try:
-        meta = {'name': file_obj.name, 'parents': [folder_id]}
+        meta = {'name': new_filename, 'parents': [folder_id]}
         media = MediaIoBaseUpload(io.BytesIO(file_obj.read()), mimetype=file_obj.type, resumable=True)
         service.files().create(body=meta, media_body=media).execute()
         return True
-    except: return False
+    except:
+        return False
 
 # ==============================================================================
-# 3. CONTROLE DE ESTADO E LOGIN
+# 3. LOGIN
 # ==============================================================================
 if 'autenticato' not in st.session_state: st.session_state.autenticato = False
 if 'clienti' not in st.session_state: st.session_state.clienti = []
@@ -199,7 +159,7 @@ if not st.session_state.autenticato:
     st.stop()
 
 # ==============================================================================
-# 4. INTERFACE DO GESTIONALE
+# 4. INTERFACE
 # ==============================================================================
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria"]
@@ -216,7 +176,6 @@ if menu == "📊 Dashboard":
     m3.metric("🔓 Pratiche Aperte", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta"))
     m4.metric("🔒 Pratiche Chiuse", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Chiusa"))
     
-    st.write("---")
     if st.session_state.clienti:
         col_graf1, col_graf2 = st.columns(2)
         with col_graf1:
@@ -245,16 +204,28 @@ elif menu == "👥 Anagrafica Clienti":
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
         with st.expander("📄 DOCUMENTI (Caricamento Singolo)", expanded=True):
-            st.markdown("<p style='font-size: 13px;'>Seleziona il tipo e carica il file. Il sistema creerà automaticamente la cartella nel Drive.</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 13px;'>Preencha os dados dos documentos. Depois faça o upload de todos os arquivos de uma vez no campo abaixo.</p>", unsafe_allow_html=True)
+            
             doc_list = []
             for i in range(1, 5):
-                d1, d2, d3, d4 = st.columns([1.1, 1.1, 0.7, 1.1])
+                d1, d2, d3 = st.columns([1.2, 1.2, 0.8])
                 tipo = d1.selectbox(f"Tipo Doc {i}", TIPOS_DOC, key=f"t_doc_{i}")
                 num = d2.text_input(f"Numero Doc {i}", key=f"n_doc_{i}")
                 scad = d3.date_input(f"Scadenza {i}", value=date.today(), key=f"s_doc_{i}")
-                file = d4.file_uploader(f"Upload {i}", key=f"f_doc_{i}")
+                
                 if tipo and num:
-                    doc_list.append({"tipo": tipo, "num": num, "scad": scad, "file": file})
+                    doc_list.append({
+                        "tipo": tipo.replace(" ", "").replace(".", ""),
+                        "num": num,
+                        "scad": scad
+                    })
+
+        # === UPLOAD ÚNICO MÚLTIPLO ===
+        st.subheader("📤 Upload Único de Documentos")
+        st.info("Selecione todos os arquivos na ordem correspondente às linhas acima (1º arquivo = Tipo Doc 1, 2º arquivo = Tipo Doc 2, etc.)")
+        uploaded_files = st.file_uploader("Carica tutti i documenti", 
+                                          accept_multiple_files=True, 
+                                          key="multi_upload")
 
         st.subheader("📝 ANNOTAZIONI")
         notas = st.text_area("Note e dettagli della pratica...", height=120)
@@ -262,25 +233,41 @@ elif menu == "👥 Anagrafica Clienti":
         if st.button("🚀 REGISTRA CLIENTE E SINCRONIZZA DRIVE"):
             if nome and cf:
                 srb_code = f"SRB{len(st.session_state.clienti)+1:04d}"
-                with st.spinner("Creazione cartella Drive in corso..."):
+                
+                with st.spinner("Creazione cartella Drive e upload documenti..."):
                     folder_obj, error = manage_drive_structure(nome, srb_code)
+                    
                     if folder_obj:
-                        for d in doc_list:
-                            if d['file']: upload_to_client_folder(d['file'], folder_obj['id'])
+                        success_count = 0
+                        
+                        # Faz o match por ordem
+                        for idx, file in enumerate(uploaded_files):
+                            if idx < len(doc_list):
+                                doc = doc_list[idx]
+                                new_filename = f"{doc['tipo']}_{doc['num']}.pdf"   # pode mudar extensão se necessário
+                                
+                                if upload_to_client_folder(file, folder_obj['id'], new_filename):
+                                    success_count += 1
                         
                         st.session_state.clienti.append({
-                            "ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao,
+                            "ID": srb_code, 
+                            "Nome": nome, 
+                            "CF": cf, 
+                            "Regione": regiao,
                             "Link": folder_obj['webViewLink']
                         })
-                        st.success(f"✅ Cliente {srb_code} salvato con successo!")
-                    else: st.error(f"Errore Drive: {error}")
-            else: st.error("Inserire almeno Nome e Codice Fiscale!")
+                        
+                        st.success(f"✅ Cliente {srb_code} registrado com sucesso! {success_count} documento(s) carregado(s).")
+                    else:
+                        st.error(f"Errore Drive: {error}")
+            else:
+                st.error("Inserire almeno Nome e Codice Fiscale!")
 
     with t_aba2:
         if st.session_state.clienti:
             st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
-# --- OUTRAS PÁGINAS ---
+# Outras páginas
 elif menu == "📂 Nuova Pratica":
     st.header("📂 Apertura Nuova Pratica")
     
