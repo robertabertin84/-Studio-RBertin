@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ==============================================================================
-# 1. CONFIGURAZIONE E CSS AVANZATO (CORREÇÃO DA CAIXA PRETA E DISTÂNCIA)
+# 1. CONFIGURAZIONE E CSS AVANZATO
 # ==============================================================================
 st.set_page_config(
     page_title="Studio R Bertin - Gestionale Professionale",
@@ -18,6 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# CSS ATUALIZADO - Correção forte para todos os menus suspensos
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -48,58 +49,76 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Menus Suspensos (Fundo Branco Real) */
-    div[data-baseweb="select"] > div, .stSelectbox > div > div {
-        background-color: white !important;
+    /* ==================== CORREÇÃO FORTE PARA TODOS OS MENUS SUSPENSOS (Tipo Doc, Regione, etc.) ==================== */
+    /* Campo fechado do selectbox */
+    div[data-baseweb="select"] > div,
+    .stSelectbox > div > div {
+        background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    div[role="listbox"], div[data-baseweb="menu"], [data-baseweb="popover"], ul[data-testid="stSelectboxVirtualDropdown"] {
-        background-color: white !important;
+    /* Menu dropdown aberto (lista que desce) */
+    div[role="listbox"],
+    div[role="listbox"] ul,
+    div[role="listbox"] li,
+    div[data-baseweb="menu"],
+    [data-baseweb="popover"],
+    ul[data-testid="stSelectboxVirtualDropdown"] {
+        background-color: #f3f2f1 !important;
         color: black !important;
     }
 
-    /* ==================== ELIMINAÇÃO DA CAIXA PRETA DO UPLOAD ==================== */
+    /* Hover nos itens do menu */
+    div[role="listbox"] li:hover,
+    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
+        background-color: #e8e6e4 !important;
+    }
+
+    /* ==================== ELIMINAÇÃO TOTAL DA CAIXA PRETA DO UPLOAD ==================== */
     [data-testid="stFileUploader"] {
         background-color: transparent !important;
         border: none !important;
         padding: 0 !important;
+        margin-top: 10px !important;
     }
-    
-    /* Mata o fundo preto e a área de drop */
     [data-testid="stFileUploaderSection"] {
         display: none !important;
     }
-
-    /* Estiliza o botão Browse Files */
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
         color: black !important;
         width: 100% !important;
+        border-radius: 4px !important;
         border: 1px solid #a88a7e !important;
         height: 42px !important;
-        margin-top: 0px !important;
     }
 
-    /* ==================== REDUÇÃO DE VÁCUO (ESPAÇOS) ==================== */
-    [data-testid="stHorizontalBlock"] {
-        gap: 0.5rem !important; /* Aproxima as colunas lateralmente */
-    }
-    
+    /* Redução de espaço */
     [data-testid="column"] {
-        padding: 0 2px !important; /* Remove o vácuo interno das colunas */
+        padding: 0 5px !important;
+    }
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.3rem !important;
     }
 
-    /* Ajuste para alinhar verticalmente o botão de upload com os inputs */
-    [data-testid="stFileUploader"] {
-        margin-top: 28px !important;
+    /* Métricas */
+    [data-testid="stMetric"] {
+        background-color: #eaddd7 !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        border: 2px solid #bc9e92 !important;
     }
 
-    /* Métricas e Botões */
-    [data-testid="stMetric"] { background-color: #eaddd7 !important; padding: 15px !important; border-radius: 10px !important; border: 2px solid #bc9e92 !important; }
-    button, [data-testid="baseButton-primary"] { background-color: #bc9e92 !important; color: black !important; border: 2px solid #a88a7e !important; }
-    button:hover { background-color: #a88a7e !important; }
+    /* Botões Gerais */
+    button, [data-testid="baseButton-primary"] {
+        background-color: #bc9e92 !important;
+        color: black !important;
+        border: 2px solid #a88a7e !important;
+    }
+    button:hover { 
+        background-color: #a88a7e !important; 
+    }
 
     header { visibility: hidden; }
     footer { visibility: hidden; }
@@ -107,7 +126,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. SISTEMA DE BACK-END: GOOGLE DRIVE
+# 2. SISTEMA DE BACK-END: GOOGLE DRIVE E SEGURANÇA
 # ==============================================================================
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -118,19 +137,34 @@ def init_google_drive():
         info = st.secrets["gcp_service_account"]
         creds = Credentials.from_service_account_info(info, scopes=SCOPES)
         return build('drive', 'v3', credentials=creds), None
-    except Exception as e: return None, str(e)
+    except Exception as e:
+        return None, str(e)
 
 def manage_drive_structure(nome_cliente, srb_code):
     service, err = init_google_drive()
     if err: return None, err
+    
     try:
         q = "name = 'GESTIONALE RBERTIN' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         res = service.files().list(q=q).execute()
         folders = res.get('files', [])
-        root_id = folders[0]['id'] if folders else service.files().create(body={'name': 'GESTIONALE RBERTIN', 'mimeType': 'application/vnd.google-apps.folder'}, fields='id').execute()['id']
-        folder_meta = {'name': f"{srb_code} - {nome_cliente}", 'mimeType': 'application/vnd.google-apps.folder', 'parents': [root_id]}
-        return service.files().create(body=folder_meta, fields='id, webViewLink').execute(), None
-    except Exception as e: return None, str(e)
+        
+        if not folders:
+            meta = {'name': 'GESTIONALE RBERTIN', 'mimeType': 'application/vnd.google-apps.folder'}
+            root = service.files().create(body=meta, fields='id').execute()
+            root_id = root['id']
+        else:
+            root_id = folders[0]['id']
+            
+        folder_meta = {
+            'name': f"{srb_code} - {nome_cliente}",
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [root_id]
+        }
+        new_folder = service.files().create(body=folder_meta, fields='id, webViewLink').execute()
+        return new_folder, None
+    except Exception as e:
+        return None, f"Errore Drive: {e}"
 
 def upload_to_client_folder(file_obj, folder_id):
     service, _ = init_google_drive()
@@ -155,6 +189,7 @@ if not st.session_state.autenticato:
     with c_log2:
         with st.form("login_form"):
             st.markdown("<h1 style='text-align: center;'>⚖️ Studio R Bertin</h1>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center;'>Accesso Riservato</p>", unsafe_allow_html=True)
             pwd = st.text_input("Inserire Password:", type="password")
             if st.form_submit_button("ACCEDI"):
                 if pwd == "RB2026": 
@@ -169,38 +204,50 @@ if not st.session_state.autenticato:
 LISTA_REGIONI = ["", "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 TIPOS_DOC = ["", "C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria"]
 
-st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"], key="nav_menu")
-menu = st.session_state.nav_menu
+st.sidebar.markdown("<h2 style='text-align: center;'>Menu Studio</h2>", unsafe_allow_html=True)
+menu = st.sidebar.radio("NAVIGAZIONE", ["📊 Dashboard", "👥 Anagrafica Clienti", "📂 Nuova Pratica", "🗄️ Archivio"])
 
+# --- DASHBOARD ---
 if menu == "📊 Dashboard":
-    st.header("📊 Dashboard")
-    m1, m2 = st.columns(2)
-    m1.metric("👥 Clienti", len(st.session_state.clienti))
-    m2.metric("📂 Pratiche", len(st.session_state.pratiche))
-
-elif menu == "👥 Anagrafica Clienti":
-    st.header("👥 Gestione Anagrafica")
-    t1, t2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti"])
+    st.header("📊 Stato Generale dello Studio")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("👥 Clienti Totali", len(st.session_state.clienti))
+    m2.metric("📂 Pratiche Totali", len(st.session_state.pratiche))
+    m3.metric("🔓 Pratiche Aperte", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Aperta"))
+    m4.metric("🔒 Pratiche Chiuse", sum(1 for p in st.session_state.pratiche if p.get("Stato") == "Chiusa"))
     
-    with t1:
+    st.write("---")
+    if st.session_state.clienti:
+        col_graf1, col_graf2 = st.columns(2)
+        with col_graf1:
+            st.subheader("📍 Geografia Clienti")
+            df_cli = pd.DataFrame(st.session_state.clienti)
+            st.bar_chart(df_cli['Regione'].value_counts())
+
+# --- ANAGRAFICA CLIENTI ---
+elif menu == "👥 Anagrafica Clienti":
+    st.header("👥 Gestione Anagrafica e Documentale")
+    t_aba1, t_aba2 = st.tabs(["➕ Registra Cliente", "📑 Lista Clienti (SRB Order)"])
+    
+    with t_aba1:
         with st.expander("📍 DATI PERSONALI", expanded=True):
             cp1, cp2 = st.columns(2)
             nome = cp1.text_input("Nome e Cognome")
             cf = cp1.text_input("Codice Fiscale")
-            tel = cp2.text_input("Telefono")
-            email = cp2.text_input("Email")
+            tel = cp2.text_input("Telefono (WhatsApp)")
+            email = cp2.text_input("Indirizzo Email")
             
         with st.expander("🏠 INDIRIZZO", expanded=True):
             ci1, ci2, ci3 = st.columns([2, 1, 1])
-            rua = ci1.text_input("Via / Piazza")
+            rua = ci1.text_input("Via / Piazza e Civico")
             cidade = ci2.text_input("Città")
             cap = ci3.text_input("CAP")
             regiao = st.selectbox("Regione", LISTA_REGIONI)
 
-        with st.expander("📄 DOCUMENTI", expanded=True):
+        with st.expander("📄 DOCUMENTI (Caricamento Singolo)", expanded=True):
+            st.markdown("<p style='font-size: 13px;'>Seleziona il tipo e carica il file. Il sistema creerà automaticamente la cartella nel Drive.</p>", unsafe_allow_html=True)
             doc_list = []
             for i in range(1, 5):
-                # Colunas ajustadas para reduzir o vácuo
                 d1, d2, d3, d4 = st.columns([1.1, 1.1, 0.7, 1.1])
                 tipo = d1.selectbox(f"Tipo Doc {i}", TIPOS_DOC, key=f"t_doc_{i}")
                 num = d2.text_input(f"Numero Doc {i}", key=f"n_doc_{i}")
@@ -209,21 +256,35 @@ elif menu == "👥 Anagrafica Clienti":
                 if tipo and num:
                     doc_list.append({"tipo": tipo, "num": num, "scad": scad, "file": file})
 
-        if st.button("🚀 REGISTRA E SINCRONIZZA"):
+        st.subheader("📝 ANNOTAZIONI")
+        notas = st.text_area("Note e dettagli della pratica...", height=120)
+
+        if st.button("🚀 REGISTRA CLIENTE E SINCRONIZZA DRIVE"):
             if nome and cf:
                 srb_code = f"SRB{len(st.session_state.clienti)+1:04d}"
-                folder_obj, error = manage_drive_structure(nome, srb_code)
-                if folder_obj:
-                    for d in doc_list:
-                        if d['file']: upload_to_client_folder(d['file'], folder_obj['id'])
-                    st.session_state.clienti.append({"ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao, "Link": folder_obj['webViewLink']})
-                    st.success("✅ Salvato!")
-            else: st.error("Dati mancanti.")
+                with st.spinner("Creazione cartella Drive in corso..."):
+                    folder_obj, error = manage_drive_structure(nome, srb_code)
+                    if folder_obj:
+                        for d in doc_list:
+                            if d['file']: upload_to_client_folder(d['file'], folder_obj['id'])
+                        
+                        st.session_state.clienti.append({
+                            "ID": srb_code, "Nome": nome, "CF": cf, "Regione": regiao,
+                            "Link": folder_obj['webViewLink']
+                        })
+                        st.success(f"✅ Cliente {srb_code} salvato con successo!")
+                    else: st.error(f"Errore Drive: {error}")
+            else: st.error("Inserire almeno Nome e Codice Fiscale!")
 
-    with t2:
-        if st.session_state.clienti: st.dataframe(pd.DataFrame(st.session_state.clienti))
+    with t_aba2:
+        if st.session_state.clienti:
+            st.dataframe(pd.DataFrame(st.session_state.clienti), use_container_width=True)
 
+# --- OUTRAS PÁGINAS ---
+elif menu == "📂 Nuova Pratica":
+    st.header("📂 Apertura Nuova Pratica")
+    
 elif menu == "🗄️ Archivio":
-    st.header("🗄️ Archivio Drive")
+    st.header("🗄️ Archivio Documentale Drive")
     for c in st.session_state.clienti:
-        st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri]({c['Link']})")
+        st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri Cartella]({c['Link']})")
