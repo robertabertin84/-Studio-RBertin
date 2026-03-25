@@ -4,7 +4,6 @@ from datetime import datetime, date
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 import pydeck as pdk
-import json
 
 # ==========================================
 # 1. CONFIGURAZIONE ESTETICA TOTALE (NO NERO)
@@ -25,7 +24,7 @@ st.markdown(f"""
         font-weight: 500; 
     }}
 
-    /* 3. Barras de Expander, Cabeçalhos, Dropdowns e Header (Bege #bc9e92) */
+    /* 3. Barras de Expander, Cabeçalhos e Dropdowns (Bege #bc9e92) */
     .streamlit-expanderHeader, div[data-testid="stExpander"], 
     div[data-baseweb="select"] > div,
     header[data-testid="stHeader"] {{
@@ -119,14 +118,12 @@ if 'pratiche' not in st.session_state: st.session_state.pratiche = []
 LISTA_REGIONI = ["Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"]
 DOC_TYPES = ["C.I. Italiana", "Passaporto", "Permesso di Soggiorno", "Patente", "Codice Fiscale", "Tessera Sanitaria", "Altro"]
 
-# --- DADOS DO MAPA (COORDENADAS E CENTROS DAS REGIÕES) ---
-# Este dicionário precisa ser expandido com as coordenadas precisas de todas as regiões para que os números apareçam no lugar certo.
-# Por enquanto, configurei apenas as capitais como exemplo.
+# --- DADOS DO MAPA (COORDENADAS CENTRAIS DAS REGIÕES) ---
 CENTROS_REGIONI = {
     "Lombardia": [45.46, 9.18], # Milão
     "Lazio": [41.90, 12.49],    # Roma
     "Sicilia": [38.11, 13.36],   # Palermo
-    # Adicionar as outras 17 regiões aqui...
+    # Adicione as outras regiões aqui para o número aparecer na posição correta
 }
 
 # ==========================================
@@ -135,7 +132,7 @@ CENTROS_REGIONI = {
 st.sidebar.title("🏛️ Studio RBertin")
 menu = st.sidebar.radio("NAVIGAZIONE", ["Dashboard", "Anagrafica Clienti", "Nuova Pratica", "Archivio"])
 
-# --- DASHBOARD COMPLETA COM MAPA INTERATIVO ---
+# --- DASHBOARD COMPLETA COM MAPA CORRIGIDO ---
 if menu == "Dashboard":
     st.header("📊 Dashboard Studio RBertin")
     
@@ -148,7 +145,7 @@ if menu == "Dashboard":
 
     st.write("---")
     
-    # 2. Mapa Interativo (NOVO)
+    # 2. Mapa Interativo (CORRIGIDO)
     st.subheader("📍 Distribuzione Geografica Clienti")
     
     # Processamento de dados: Contar clientes por região
@@ -166,32 +163,17 @@ if menu == "Dashboard":
                     "Lon": centro[1],
                     "Clienti": count,
                     # Cor do círculo: Bege #bc9e92
-                    "Color": [188, 158, 146, 200], # RGBA
+                    "Color": [188, 158, 146, 200] # RGBA
                 })
     
-    # Configuração da Camada do Mapa: Círculos com números
-    # Como não temos um GeoJSON limpo das regiões, vamos usar pontos interativos.
-    # O contorno marrom #b68b73 será aplicado apenas nas letras do nome e no número.
-    scatterplot_layer = pdk.Layer(
+    # Configuração da Camada do Mapa (Scatterplot - círculos proporcionais)
+    layer = pdk.Layer(
         "ScatterplotLayer",
         map_data,
         get_position=["Lon", "Lat"],
-        get_radius="Clienti * 20000", # Raio proporcional ao número de clientes
+        get_radius="Clienti * 10000", # Raio proporcional ao número de clientes
         get_fill_color="Color",
         pickable=True,
-    )
-    
-    text_layer = pdk.Layer(
-        "TextLayer",
-        map_data,
-        get_position=["Lon", "Lat"],
-        get_text="Regione + ' ( ' + str(Clienti) + ' )'",
-        get_size=18,
-        # Marrom Claro #b68b73 para o texto
-        get_color=[182, 139, 115], # RGB
-        get_angle=0,
-        get_text_anchor='"middle"',
-        get_alignment_baseline='"center"',
     )
 
     # Configuração da View (Focada na Itália)
@@ -202,12 +184,10 @@ if menu == "Dashboard":
         pitch=0
     )
 
-    # Renderização do Mapa com pydeck
+    # Renderização do Mapa com pydeck (Correção do erro JSON)
     r = pdk.Deck(
-        layers=[scatterplot_layer, text_layer],
+        layers=[layer],
         initial_view_state=view_state,
-        map_provider="carto", # Usar um provedor de base mais limpo
-        map_style="light", # Estilo claro para contrastar com o texto marrom
         tooltip={"text": "{Regione}: {Clienti} clienti"},
     )
     st.pydeck_chart(r, use_container_width=True)
@@ -260,7 +240,7 @@ elif menu == "Anagrafica Clienti":
         if st.session_state.clienti:
             df = pd.DataFrame(st.session_state.clienti)
             st.dataframe(df[["ID", "Nome", "Regione", "Tel"]], use_container_width=True)
-            sel = st.selectbox("Seleziona ID per dettagli", df["ID"])
+            sel = st.selectbox("Seleziona ID per detalhes", df["ID"])
             c_sel = next(c for c in st.session_state.clienti if c["ID"] == sel)
             st.info(f"📁 [Apri Cartella Drive]({c_sel['Drive_URL']})")
 
@@ -278,4 +258,4 @@ elif menu == "Nuova Pratica":
 elif menu == "Archivio":
     st.header("🗄️ Archivio")
     if st.session_state.pratiche: st.table(pd.DataFrame(st.session_state.pratiche))
-    else: st.info("Archivio vuoto.")
+    else: st.info("L'archivio è vuoto.")
