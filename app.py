@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS ATUALIZADO - Apenas as correções solicitadas
+# CSS ATUALIZADO - Correção forte para todos os menus suspensos
 st.markdown("""
     <style>
     /* Fundo Global */
@@ -49,26 +49,29 @@ st.markdown("""
         border: 1px solid #bc9e92 !important;
     }
 
-    /* ==================== CORREÇÃO DO MENU REGIONE ==================== */
-    /* Fundo do dropdown aberto */
-    div[role="listbox"], 
-    div[role="listbox"] ul, 
-    div[role="listbox"] li,
-    div[data-baseweb="menu"],
-    [data-baseweb="popover"] {
-        background-color: #f3f2f1 !important;
-        color: black !important;
-    }
-
-    /* Fundo do campo fechado do select (Regione) */
-    [data-baseweb="select"] > div {
+    /* ==================== CORREÇÃO FORTE PARA TODOS OS MENUS SUSPENSOS (Tipo Doc, Regione, etc.) ==================== */
+    /* Campo fechado do selectbox */
+    div[data-baseweb="select"] > div,
+    .stSelectbox > div > div {
         background-color: #f3f2f1 !important;
         color: black !important;
         border: 1px solid #bc9e92 !important;
     }
 
-    /* Hover no menu */
-    div[role="listbox"] li:hover {
+    /* Menu dropdown aberto (lista que desce) */
+    div[role="listbox"],
+    div[role="listbox"] ul,
+    div[role="listbox"] li,
+    div[data-baseweb="menu"],
+    [data-baseweb="popover"],
+    ul[data-testid="stSelectboxVirtualDropdown"] {
+        background-color: #f3f2f1 !important;
+        color: black !important;
+    }
+
+    /* Hover nos itens do menu */
+    div[role="listbox"] li:hover,
+    ul[data-testid="stSelectboxVirtualDropdown"] li:hover {
         background-color: #e8e6e4 !important;
     }
 
@@ -80,7 +83,7 @@ st.markdown("""
         margin-top: 10px !important;
     }
     [data-testid="stFileUploaderSection"] {
-        display: none !important; /* Remove a caixa preta gigante */
+        display: none !important;
     }
     [data-testid="stFileUploader"] button {
         background-color: #bc9e92 !important;
@@ -128,7 +131,6 @@ st.markdown("""
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 def init_google_drive():
-    """Inicialização segura dos serviços Google"""
     try:
         if "gcp_service_account" not in st.secrets:
             return None, "Secret gcp_service_account não encontrada."
@@ -139,7 +141,6 @@ def init_google_drive():
         return None, str(e)
 
 def manage_drive_structure(nome_cliente, srb_code):
-    """Criação automatizada de pastas hierárquicas"""
     service, err = init_google_drive()
     if err: return None, err
     
@@ -166,7 +167,6 @@ def manage_drive_structure(nome_cliente, srb_code):
         return None, f"Errore Drive: {e}"
 
 def upload_to_client_folder(file_obj, folder_id):
-    """Upload silencioso para o Drive"""
     service, _ = init_google_drive()
     if not service: return False
     try:
@@ -288,3 +288,4 @@ elif menu == "🗄️ Archivio":
     st.header("🗄️ Archivio Documentale Drive")
     for c in st.session_state.clienti:
         st.write(f"📁 {c['ID']} - {c['Nome']} - [Apri Cartella]({c['Link']})")
+            
